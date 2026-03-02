@@ -244,9 +244,65 @@ input, textarea {
   text-decoration: none;
 }
 
+.nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.nav-brand:hover {
+  color: var(--ink);
+}
+
+.nav-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.nav-title {
+  font-weight: 600;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .nav-title {
+    display: none;
+  }
+}
+
 .nav-muted {
   font-size: 0.875rem;
   color: var(--muted);
+}
+
+.sort-row-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sort-row-toggle-checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+}
+
+.login-header {
+  text-align: center;
+}
+
+.login-header .login-logo {
+  margin-bottom: 1rem;
+  height: 64px;
+  width: auto;
+  object-fit: contain;
 }
 
 .bio-title {
@@ -319,6 +375,7 @@ input, textarea {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
 .sort-label {
@@ -339,6 +396,75 @@ input, textarea {
 .sort-select:focus {
   outline: none;
   border-color: var(--accent-soft);
+}
+
+.view-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.view-toggle .btn {
+  padding: 0.4rem 0.75rem;
+}
+
+.btn-toggle-active {
+  background: rgba(139, 105, 20, 0.1);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.gallery-card {
+  margin-bottom: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.gallery-media {
+  display: block;
+  background: #f5f2ed;
+}
+
+.gallery-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-placeholder {
+  width: 100%;
+  height: 220px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(196, 168, 75, 0.25), rgba(139, 105, 20, 0.08));
+  border-bottom: 1px solid var(--border);
+}
+
+.gallery-placeholder span {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 105, 20, 0.35);
+  display: grid;
+  place-items: center;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.75rem;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.gallery-body {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.gallery-title {
+  font-size: 1.35rem;
+  line-height: 1.2;
 }
 
 .bio-thumb-wrap {

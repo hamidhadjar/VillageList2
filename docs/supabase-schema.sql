@@ -11,7 +11,9 @@ create table if not exists public.biographies (
   full_bio text not null,
   image_url text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  last_edited_at timestamptz,
+  last_edited_by text
 );
 
 -- Optional: trigger to auto-update updated_at

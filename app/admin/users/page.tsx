@@ -42,19 +42,30 @@ export default function AdminUsersPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: form.email, password: form.password, role: form.role }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || 'Erreur');
-      return;
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ email: form.email, password: form.password, role: form.role }),
+      });
+      let data: { error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setError(res.ok ? 'Réponse invalide.' : `Erreur ${res.status}. Réessayez.`);
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error || 'Erreur');
+        return;
+      }
+      setShowForm(false);
+      setForm({ email: '', password: '', role: 'viewer' });
+      fetchUsers();
+    } catch (err) {
+      setError('Erreur réseau ou serveur. Réessayez.');
     }
-    setShowForm(false);
-    setForm({ email: '', password: '', role: 'viewer' });
-    fetchUsers();
   };
 
   const handleUpdate = async (e: React.FormEvent, id: string) => {

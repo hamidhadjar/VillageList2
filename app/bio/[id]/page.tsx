@@ -4,13 +4,30 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { Biography } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
 
 const CAN_EDIT: Role[] = ['edit', 'admin'];
 
+function formatLastEdited(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d);
+  } catch {
+    return iso;
+  }
+}
+
 export default function ViewBioPage() {
   const { data: session } = useSession();
+  const { showLastEdited } = useShowLastEdited();
   const role = (session?.user as { role?: Role })?.role;
   const canEdit = role && CAN_EDIT.includes(role);
 
@@ -92,6 +109,11 @@ export default function ViewBioPage() {
             {bio.birthDate && <span>{bio.birthDate}</span>}
             {bio.birthDate && bio.deathDate && ' — '}
             {bio.deathDate && <span>{bio.deathDate}</span>}
+          </p>
+        )}
+        {showLastEdited && (bio.lastEditedAt || bio.lastEditedBy) && (
+          <p className="meta bio-view-last-edited">
+            Dernière modification{bio.lastEditedAt ? ` le ${formatLastEdited(bio.lastEditedAt)}` : ''}{bio.lastEditedBy ? ` par ${bio.lastEditedBy}` : ''}.
           </p>
         )}
         <p className="bio-view-summary">{bio.summary}</p>

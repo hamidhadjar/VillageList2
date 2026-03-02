@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getUserById, updateUser, deleteUser, getUserByEmail } from '@/lib/users-store';
 import { hashPassword } from '@/lib/auth';
@@ -6,10 +6,10 @@ import type { Role } from '@/lib/user-types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+  const token = await getToken({ req: request, secret: getNextAuthSecret() });
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
@@ -20,10 +20,10 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+  const token = await getToken({ req: request, secret: getNextAuthSecret() });
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
@@ -54,10 +54,10 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+  const token = await getToken({ req: request, secret: getNextAuthSecret() });
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }

@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { Biography } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
 
 type SortOption = 'name-asc' | 'name-desc' | 'death-asc' | 'death-desc';
+type ViewMode = 'list' | 'gallery';
 
 function parseDeathDate(dateStr: string | undefined): string {
   if (!dateStr || !dateStr.trim()) return '';
@@ -20,10 +22,28 @@ function parseDeathDate(dateStr: string | undefined): string {
   return s;
 }
 
+function formatLastEditedShort(bio: Biography): string | null {
+  if (!bio.lastEditedAt && !bio.lastEditedBy) return null;
+  const parts: string[] = [];
+  if (bio.lastEditedAt) {
+    try {
+      const d = new Date(bio.lastEditedAt);
+      parts.push('Modifié le ' + new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(d));
+    } catch {
+      parts.push('Modifié');
+    }
+  } else {
+    parts.push('Modifié');
+  }
+  if (bio.lastEditedBy) parts.push('par ' + bio.lastEditedBy);
+  return parts.join(' ');
+}
+
 const CAN_EDIT: Role[] = ['edit', 'admin'];
 
 export default function HomePage() {
   const { data: session } = useSession();
+  const { showLastEdited, setShowLastEdited } = useShowLastEdited();
   const role = (session?.user as { role?: Role })?.role;
   const canEdit = role && CAN_EDIT.includes(role);
 
@@ -34,6 +54,7 @@ export default function HomePage() {
   const [searchBirthDate, setSearchBirthDate] = useState('');
   const [searchDeathDate, setSearchDeathDate] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name-asc');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const filtered = biographies.filter((bio) => {
     const nameMatch = !searchName.trim() || bio.name.toLowerCase().includes(searchName.trim().toLowerCase());
@@ -63,6 +84,23 @@ export default function HomePage() {
   useEffect(() => {
     fetchBiographies();
   }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('bioViewMode') as ViewMode | null;
+      if (saved === 'list' || saved === 'gallery') setViewMode(saved);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('bioViewMode', viewMode);
+    } catch {
+      // ignore
+    }
+  }, [viewMode]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cette biographie ?')) return;
@@ -149,6 +187,31 @@ export default function HomePage() {
               <option value="death-asc">Date de décès (ancien → récent)</option>
               <option value="death-desc">Date de décès (récent → ancien)</option>
             </select>
+            <div className="view-toggle" role="group" aria-label="Affichage">
+              <button
+                type="button"
+                className={`btn btn-ghost ${viewMode === 'list' ? 'btn-toggle-active' : ''}`}
+                onClick={() => setViewMode('list')}
+              >
+                Liste
+              </button>
+              <button
+                type="button"
+                className={`btn btn-ghost ${viewMode === 'gallery' ? 'btn-toggle-active' : ''}`}
+                onClick={() => setViewMode('gallery')}
+              >
+                Galerie
+              </button>
+            </div>
+            <label className="sort-row-toggle-label">
+              <input
+                type="checkbox"
+                checked={showLastEdited}
+                onChange={(e) => setShowLastEdited(e.target.checked)}
+                className="sort-row-toggle-checkbox"
+              />
+              <span className="sort-label">Dernière modif.</span>
+            </label>
           </div>
         </div>
       )}
@@ -178,27 +241,115 @@ export default function HomePage() {
           </button>
         </div>
       ) : (
-        <ul style={{ listStyle: 'none' }}>
-          {sorted.map((bio) => (
-            <li key={bio.id} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                {bio.imageUrl && (
-                  <div className="bio-thumb-wrap">
-                    <img src={bio.imageUrl} alt="" className="bio-thumb" />
-                  </div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h2 style={{ fontSize: '1.35rem' }}>
+        viewMode === 'gallery' ? (
+          <div className="gallery-grid">
+            {sorted.map((bio) => {
+              const lastEditedStr = formatLastEditedShort(bio);
+              return (
+              <div key={bio.id} className="card gallery-card">
+                <Link href={`/bio/${bio.id}`} className="gallery-media" aria-label={`Voir ${bio.name}`}>
+                  {bio.imageUrl ? (
+                    <img src={bio.imageUrl} alt="" className="gallery-image" />
+                  ) : (
+                    <div className="gallery-placeholder" aria-hidden="true">
+                      <span>{bio.name.trim().slice(0, 1).toUpperCase()}</span>
+                    </div>
+                  )}
+                </Link>
+
+                <div className="gallery-body">
+                  <h2 className="gallery-title">
                     <Link href={`/bio/${bio.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                       {bio.name}
                     </Link>
                   </h2>
                   {bio.title && <p className="bio-title">{bio.title}</p>}
                   {(bio.birthDate || bio.deathDate) && (
+                    <p className="meta" style={{ marginTop: '0.25rem' }}>
+                      {bio.birthDate && <span>{bio.birthDate}</span>}
+                      {bio.birthDate && bio.deathDate && ' — '}
+                      {bio.deathDate && <span>{bio.deathDate}</span>}
+                    </p>
+                  )}
+                  {showLastEdited && lastEditedStr && (
+                    <p className="meta bio-last-edited" style={{ marginTop: '0.25rem' }} title={lastEditedStr}>
+                      {lastEditedStr}
+                    </p>
+                  )}
+                  <div className="actions" style={{ marginTop: '0.75rem' }}>
+                    <Link href={`/bio/${bio.id}`} className="btn btn-ghost">
+                      Voir
+                    </Link>
+                    {canEdit && (
+                      <>
+                        <Link href={`/edit/${bio.id}`} className="btn btn-ghost">
+                          Modifier
+                        </Link>
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          onClick={() => setDeleteId(bio.id)}
+                        >
+                          Supprimer
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {deleteId === bio.id && (
+                  <div className="overlay" onClick={() => setDeleteId(null)} role="dialog" aria-modal="true">
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                      <h3>Supprimer cette biographie ?</h3>
+                      <p>« {bio.name} » sera définitivement supprimé. Cette action est irréversible.</p>
+                      <div className="actions">
+                        <button type="button" className="btn btn-ghost" onClick={() => setDeleteId(null)}>
+                          Annuler
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          onClick={() => handleDelete(bio.id)}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+            })}
+          </div>
+        ) : (
+          <ul style={{ listStyle: 'none' }}>
+            {sorted.map((bio) => {
+              const lastEditedStr = formatLastEditedShort(bio);
+              return (
+              <li key={bio.id} className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                  {bio.imageUrl && (
+                    <div className="bio-thumb-wrap">
+                      <img src={bio.imageUrl} alt="" className="bio-thumb" />
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h2 style={{ fontSize: '1.35rem' }}>
+                      <Link href={`/bio/${bio.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                        {bio.name}
+                      </Link>
+                    </h2>
+                    {bio.title && <p className="bio-title">{bio.title}</p>}
+                  {(bio.birthDate || bio.deathDate) && (
                     <p className="meta">
                       {bio.birthDate && <span>{bio.birthDate}</span>}
                       {bio.birthDate && bio.deathDate && ' — '}
                       {bio.deathDate && <span>{bio.deathDate}</span>}
+                    </p>
+                  )}
+                  {showLastEdited && lastEditedStr && (
+                    <p className="meta bio-last-edited" title={lastEditedStr}>
+                      {lastEditedStr}
                     </p>
                   )}
                   <p className="bio-summary">{bio.summary}</p>
@@ -246,8 +397,10 @@ export default function HomePage() {
                 </div>
               )}
             </li>
-          ))}
-        </ul>
+            );
+            })}
+          </ul>
+        )
       )}
     </div>
   );

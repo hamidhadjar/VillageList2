@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import type { Role } from '@/lib/user-types';
 
@@ -11,8 +12,18 @@ export function Nav() {
   return (
     <nav className="nav">
       <div className="nav-inner">
-        <Link href="/">Gestion des biographies</Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <Link href="/" className="nav-brand">
+          <Image
+            src="/logo.png"
+            alt="Association Sociale IXULAF - Imaghdacen"
+            width={120}
+            height={48}
+            className="nav-logo"
+            priority
+          />
+          <span className="nav-title">Gestion des biographies</span>
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           {(role === 'admin' || role === 'edit') && (
             <Link href="/add">Ajouter une biographie</Link>
           )}

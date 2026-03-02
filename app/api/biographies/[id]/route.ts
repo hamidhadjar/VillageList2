@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getBiographyById, updateBiography, deleteBiography } from '@/lib/db';
 import { Biography } from '@/lib/types';
@@ -7,7 +7,7 @@ import { getNextAuthSecret } from '@/lib/nextauth-secret';
 const EDIT_ROLES = ['edit', 'admin'];
 
 export async function GET(
-  _request: Request,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -19,15 +19,17 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+  const token = await getToken({ req: request, secret: getNextAuthSecret() });
   if (!token || !EDIT_ROLES.includes(token.role as string)) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   const { id } = await params;
   const body = (await request.json()) as Partial<Biography> & { imageUrl?: string | null };
+  const now = new Date().toISOString();
+  const editorEmail = (token.email as string) ?? '';
   const updated = await updateBiography(id, {
     name: body.name,
     summary: body.summary,
@@ -36,6 +38,8 @@ export async function PUT(
     deathDate: body.deathDate,
     title: body.title,
     imageUrl: body.imageUrl,
+    lastEditedAt: now,
+    lastEditedBy: editorEmail,
   });
   if (!updated) {
     return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
@@ -44,10 +48,10 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+  const token = await getToken({ req: request, secret: getNextAuthSecret() });
   if (!token || !EDIT_ROLES.includes(token.role as string)) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }

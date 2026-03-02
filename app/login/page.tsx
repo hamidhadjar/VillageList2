@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -33,7 +34,15 @@ export default function LoginPage() {
 
   return (
     <div className="container">
-      <div className="page-header">
+      <div className="page-header login-header">
+        <Image
+          src="/logo.png"
+          alt="Association Sociale IXULAF - Imaghdacen"
+          width={160}
+          height={64}
+          className="login-logo"
+          priority
+        />
         <h1>Connexion</h1>
       </div>
       <form onSubmit={handleSubmit} className="card" style={{ maxWidth: '400px' }}>

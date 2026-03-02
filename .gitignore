@@ -3,4 +3,5 @@ node_modules
 out
 .env*.local
 data/biographies.json
+data/users.json
 public/uploads

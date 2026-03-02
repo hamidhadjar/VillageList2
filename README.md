@@ -45,7 +45,34 @@ Open [http://localhost:3001](http://localhost:3001).
 
 ## Deploying online
 
-Deploy to Vercel, Railway, or any Node host. Add the same env vars (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) in the host’s dashboard. The database and images live in Supabase, so they work the same in production.
+Deploy to Vercel, Railway, Netlify, or any Node host. Add the same env vars in the host’s dashboard. Use **Supabase** in production so data and images persist.
+
+### Deploy on Netlify
+
+**Pre-deploy checklist**
+
+| Item | Status |
+|------|--------|
+| `netlify.toml` in repo | ✓ |
+| `@netlify/plugin-nextjs` in package.json | ✓ |
+| Supabase project + `biographies` table + bucket `biography-images` | Required for data/images |
+| Env vars set in Netlify (see below) | Required |
+
+1. **Push your repo** to GitHub (or GitLab/Bitbucket). Do **not** commit `data/users.json` or `.env*.local`.
+
+2. **New site from Git**  
+   [Netlify](https://app.netlify.com) → **Add new site** → **Import an existing project** → choose your repo.
+
+3. **Build settings** (from `netlify.toml`): Build command `npm run build`; leave **Publish directory** empty.
+
+4. **Environment variables** (Site settings → Environment variables):
+   - `NEXTAUTH_SECRET` — e.g. `openssl rand -base64 32`
+   - `NEXTAUTH_URL` — your Netlify URL, e.g. `https://your-site-name.netlify.app` (no trailing slash)
+   - `SUPABASE_URL` — Supabase → Settings → API
+   - `SUPABASE_SERVICE_ROLE_KEY` — Supabase → Settings → API (service_role key)
+
+5. **Deploy.**  
+   After the first deploy, set `NEXTAUTH_URL` to the real URL if Netlify assigned a random one, then trigger a new deploy. **Users** are stored in `data/users.json`; on Netlify this is **not persistent**. For production you may need to store users in Supabase. **Biographies** and images persist when Supabase env vars are set.
 
 ## Stack
 

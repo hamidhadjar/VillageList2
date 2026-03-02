@@ -16,6 +16,8 @@ function rowToBio(row: Record<string, unknown>): Biography {
     imageUrl: (row.image_url as string) ?? undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    lastEditedAt: (row.last_edited_at as string) ?? undefined,
+    lastEditedBy: (row.last_edited_by as string) ?? undefined,
   };
 }
 
@@ -82,7 +84,10 @@ export async function updateBiography(
     if (input.summary !== undefined) row.summary = input.summary;
     if (input.fullBio !== undefined) row.full_bio = input.fullBio;
     if (input.imageUrl !== undefined) row.image_url = input.imageUrl ?? null;
-    row.updated_at = new Date().toISOString();
+    const now = new Date().toISOString();
+    row.updated_at = now;
+    if (input.lastEditedAt !== undefined) row.last_edited_at = input.lastEditedAt;
+    if (input.lastEditedBy !== undefined) row.last_edited_by = input.lastEditedBy;
 
     const { data, error } = await supabase
       .from(TABLE)

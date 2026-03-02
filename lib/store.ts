@@ -57,11 +57,14 @@ export function updateBiography(id: string, input: Partial<Biography>): Biograph
   const items = readBiographies();
   const index = items.findIndex((b) => b.id === id);
   if (index === -1) return null;
+  const now = new Date().toISOString();
   items[index] = {
     ...items[index],
     ...input,
     id,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
+    lastEditedAt: input.lastEditedAt ?? now,
+    lastEditedBy: input.lastEditedBy ?? items[index].lastEditedBy,
   };
   writeBiographies(items);
   return items[index];
