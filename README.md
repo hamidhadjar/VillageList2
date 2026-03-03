@@ -74,6 +74,8 @@ Deploy to Vercel, Railway, Netlify, or any Node host. Add the same env vars in t
 5. **Deploy.**  
    After the first deploy, set `NEXTAUTH_URL` to the real URL if Netlify assigned a random one, then trigger a new deploy. **Users** are stored in `data/users.json`; on Netlify this is **not persistent**. For production you may need to store users in Supabase. **Biographies** and images persist when Supabase env vars are set.
 
+   **If you see a server error on Netlify:** ensure `NEXTAUTH_SECRET` and `NEXTAUTH_URL` are set in Site settings → Environment variables. The app avoids writing to disk in serverless (read-only); login and listing work using committed `data/` files or Supabase.
+
 ## Stack
 
 - Next.js 14 (App Router)

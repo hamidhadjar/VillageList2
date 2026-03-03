@@ -92,8 +92,14 @@ export default function AdminUsersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cet utilisateur ?')) return;
+    setError('');
     const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-    if (res.ok) fetchUsers();
+    if (res.ok) {
+      fetchUsers();
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    setError(data.error || 'Impossible de supprimer.');
   };
 
   if (loading) {
@@ -135,6 +141,12 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {error && (
+        <p style={{ color: 'var(--danger)', marginBottom: '1rem' }} role="alert">
+          {error}
+        </p>
+      )}
+
       {showForm && (
         <form onSubmit={handleCreate} className="card" style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ marginBottom: '1rem' }}>Nouvel utilisateur</h3>
@@ -171,7 +183,6 @@ export default function AdminUsersPage() {
               <option value="admin">Administrateur</option>
             </select>
           </div>
-          {error && <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</p>}
           <div className="actions">
             <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>
               Annuler
@@ -217,7 +228,6 @@ export default function AdminUsersPage() {
                     <option value="admin">Administrateur</option>
                   </select>
                 </div>
-                {error && <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</p>}
                 <div className="actions">
                   <button type="button" className="btn btn-ghost" onClick={() => setEditingId(null)}>
                     Annuler

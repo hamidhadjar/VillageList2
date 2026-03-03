@@ -48,10 +48,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(user);
   } catch (e) {
     console.error('POST /api/users error:', e);
-    const message = e instanceof Error ? e.message : 'Erreur';
-    return NextResponse.json(
-      { error: message.includes('EACCES') || message.includes('EPERM') ? 'Impossible d\'écrire dans data/users.json.' : 'Erreur lors de la création.' },
-      { status: 500 }
-    );
+    const message = e instanceof Error ? e.message : '';
+    if (message.includes('read-only') || message.includes('EROFS') || message.includes('EACCES') || message.includes('EPERM')) {
+      return NextResponse.json(
+        { error: 'La gestion des utilisateurs est en lecture seule sur ce déploiement (ex. Netlify).' },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json({ error: 'Erreur lors de la création.' }, { status: 500 });
   }
 }

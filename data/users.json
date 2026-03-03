@@ -1,11 +1,11 @@
 [
   {
     "id": "c42e9be5-a254-4f56-b869-166a404719d1",
-    "email": "tarek.mud.eng@gmail.com",
+    "email": "ixulaf@gmail.com",
     "passwordHash": "$2a$10$p8mpKJeMGsteEXkNbpXitOW.xeam3xN/Nz/YkrKHtfgfdLMFjjz0q",
-    "role": "admin",
+    "role": "edit",
     "createdAt": "2026-03-02T22:13:01.256Z",
-    "updatedAt": "2026-03-02T22:36:08.578Z"
+    "updatedAt": "2026-03-02T23:57:56.243Z"
   },
   {
     "email": "hadjar.hamid@gmail.com",
@@ -17,18 +17,10 @@
   },
   {
     "email": "tarik@gmail.com",
-    "passwordHash": "$2a$10$XZvoY83H2i8xnOHM0QP7j.H0c1Qc1qGiodTf.hRaGVMbuJJL3uDKe",
-    "role": "viewer",
-    "id": "5bea0719-3185-41bd-abbb-bba1c09504c5",
-    "createdAt": "2026-03-02T22:36:51.065Z",
-    "updatedAt": "2026-03-02T22:36:51.065Z"
-  },
-  {
-    "email": "tariklecturer@gmail.com",
-    "passwordHash": "$2a$10$IYL5.ww1U7HZlNZNaHfYVey9CapsTRCTuX4vtBcBYgQ8orbGanype",
+    "passwordHash": "$2a$10$f/exk/H450ACtvPtxgLyEeuK7qZGaAwpxEXnXLc3SlwhUc0e5T.Sq",
     "role": "edit",
-    "id": "bcb3fcb8-74a7-4817-aede-49022eaf7c77",
-    "createdAt": "2026-03-02T22:37:18.941Z",
-    "updatedAt": "2026-03-02T22:37:18.941Z"
+    "id": "92e33dcf-96e5-4ab8-a892-9fe2da0c0fa5",
+    "createdAt": "2026-03-02T23:58:23.873Z",
+    "updatedAt": "2026-03-02T23:58:23.873Z"
   }
 ]

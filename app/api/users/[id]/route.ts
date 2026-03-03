@@ -48,9 +48,20 @@ export async function PUT(
   if (password !== undefined && password.trim()) {
     updates.passwordHash = await hashPassword(password.trim());
   }
-  const user = updateUser(id, updates);
-  if (!user) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
-  return NextResponse.json(user);
+  try {
+    const user = updateUser(id, updates);
+    if (!user) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    return NextResponse.json(user);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('read-only') || msg.includes('EROFS') || msg.includes('EACCES')) {
+      return NextResponse.json(
+        { error: 'La gestion des utilisateurs est en lecture seule sur ce déploiement (ex. Netlify).' },
+        { status: 503 }
+      );
+    }
+    throw e;
+  }
 }
 
 export async function DELETE(
@@ -65,7 +76,18 @@ export async function DELETE(
   if (id === token.id) {
     return NextResponse.json({ error: 'Vous ne pouvez pas supprimer votre propre compte.' }, { status: 400 });
   }
-  const ok = deleteUser(id);
-  if (!ok) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
-  return NextResponse.json({ success: true });
+  try {
+    const ok = deleteUser(id);
+    if (!ok) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('read-only') || msg.includes('EROFS') || msg.includes('EACCES')) {
+      return NextResponse.json(
+        { error: 'La gestion des utilisateurs est en lecture seule sur ce déploiement (ex. Netlify).' },
+        { status: 503 }
+      );
+    }
+    throw e;
+  }
 }
