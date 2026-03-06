@@ -49,6 +49,13 @@ export async function POST(request: NextRequest) {
     const outUrls = getImageUrls(biography);
     return NextResponse.json({ ...biography, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });
   } catch (e) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('read-only') || msg.includes('EROFS') || (e instanceof Error && (e as Error & { code?: string }).code === 'EACCES')) {
+      return NextResponse.json(
+        { error: 'L’enregistrement des biographies est en lecture seule sur ce déploiement (ex. Vercel/Netlify). Configurez Supabase.' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: 'Impossible de créer la biographie' }, { status: 500 });
   }
 }

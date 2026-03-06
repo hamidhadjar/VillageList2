@@ -10,13 +10,17 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const biography = await getBiographyById(id);
-  if (!biography) {
-    return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+  try {
+    const { id } = await params;
+    const biography = await getBiographyById(id);
+    if (!biography) {
+      return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    }
+    const urls = getImageUrls(biography);
+    return NextResponse.json({ ...biography, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] });
+  } catch (e) {
+    return NextResponse.json({ error: 'Impossible de charger la biographie' }, { status: 500 });
   }
-  const urls = getImageUrls(biography);
-  return NextResponse.json({ ...biography, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] });
 }
 
 export async function PUT(
@@ -68,9 +72,20 @@ export async function DELETE(
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   const { id } = await params;
-  const deleted = await deleteBiography(id);
-  if (!deleted) {
-    return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+  try {
+    const deleted = await deleteBiography(id);
+    if (!deleted) {
+      return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('read-only') || msg.includes('EROFS') || (e instanceof Error && (e as Error & { code?: string }).code === 'EACCES') || (e instanceof Error && (e as Error & { cause?: unknown }).cause)) {
+      return NextResponse.json(
+        { error: 'L’enregistrement est en lecture seule sur ce déploiement (ex. Vercel/Netlify). Configurez Supabase.' },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json({ error: 'Impossible de supprimer la biographie' }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
 }

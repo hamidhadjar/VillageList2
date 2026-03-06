@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs';
 import crypto from 'crypto';
 import { getSupabase } from '@/lib/supabase';
 
@@ -23,15 +21,6 @@ function getExt(name: string, type: string): string {
   return '.jpg';
 }
 
-// Local file upload (fallback when Supabase is not configured)
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
-
-function ensureUploadDir() {
-  if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  }
-}
-
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -47,34 +36,33 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabase();
-    if (supabase) {
-      const ext = getExt(file.name, file.type);
-      const filePath = `${crypto.randomUUID()}${ext}`;
-      const bytes = await file.arrayBuffer();
-
-      const { data, error } = await supabase.storage
-        .from(BUCKET)
-        .upload(filePath, bytes, {
-          contentType: file.type,
-          upsert: false,
-        });
-
-      if (error) {
-        return NextResponse.json({ error: error.message || 'Échec du téléchargement' }, { status: 500 });
-      }
-
-      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
-      return NextResponse.json({ url: urlData.publicUrl });
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          error:
+            'Les téléversements d’images ne sont pas disponibles sur ce déploiement. Configurez Supabase (storage) pour Vercel/Netlify.',
+        },
+        { status: 503 }
+      );
     }
 
-    // Fallback: save to public/uploads
-    const ext = path.extname(file.name) || getExt(file.name, file.type);
-    const name = `${crypto.randomUUID()}${ext}`;
-    ensureUploadDir();
-    const destPath = path.join(UPLOAD_DIR, name);
+    const ext = getExt(file.name, file.type);
+    const filePath = `${crypto.randomUUID()}${ext}`;
     const bytes = await file.arrayBuffer();
-    fs.writeFileSync(destPath, Buffer.from(bytes));
-    return NextResponse.json({ url: `/uploads/${name}` });
+
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .upload(filePath, bytes, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (error) {
+      return NextResponse.json({ error: error.message || 'Échec du téléchargement' }, { status: 500 });
+    }
+
+    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+    return NextResponse.json({ url: urlData.publicUrl });
   } catch (e) {
     return NextResponse.json({ error: 'Échec du téléchargement' }, { status: 500 });
   }
