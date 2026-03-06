@@ -26,7 +26,6 @@ export async function getAllUsers(): Promise<Omit<User, 'passwordHash'>[]> {
       role: (row.role as Role) ?? 'viewer',
       createdAt: row.created_at ?? '',
       updatedAt: row.updated_at ?? '',
-      passwordHash: '',
     }));
   }
   return Promise.resolve(usersStore.getAllUsers());
@@ -38,7 +37,8 @@ export async function getUserById(id: string): Promise<Omit<User, 'passwordHash'
     const { data, error } = await supabase.from(TABLE).select('id, email, role, created_at, updated_at').eq('id', id).maybeSingle();
     if (error) throw error;
     if (!data) return undefined;
-    return { ...rowToUser({ ...data, password_hash: '' }), passwordHash: '' };
+    const { passwordHash: _, ...user } = rowToUser({ ...data, password_hash: '' });
+    return user;
   }
   return Promise.resolve(usersStore.getUserById(id));
 }
@@ -53,7 +53,8 @@ export async function getUserByEmail(email: string): Promise<Omit<User, 'passwor
     const { data, error } = await supabase.from(TABLE).select('id, email, role, created_at, updated_at').eq('email', normalizeEmail(email)).maybeSingle();
     if (error) throw error;
     if (!data) return undefined;
-    return { ...rowToUser({ ...data, password_hash: '' }), passwordHash: '' };
+    const { passwordHash: _, ...user } = rowToUser({ ...data, password_hash: '' });
+    return user;
   }
   return Promise.resolve(usersStore.getUserByEmail(email));
 }
@@ -84,7 +85,8 @@ export async function createUser(input: UserInput): Promise<Omit<User, 'password
     };
     const { data, error } = await supabase.from(TABLE).insert(row).select('id, email, role, created_at, updated_at').single();
     if (error) throw error;
-    return { ...rowToUser({ ...data, password_hash: '' }), passwordHash: '' };
+    const { passwordHash: __, ...user } = rowToUser({ ...data, password_hash: '' });
+    return user;
   }
   return Promise.resolve(usersStore.createUser(input));
 }
@@ -103,7 +105,8 @@ export async function updateUser(
     const { data, error } = await supabase.from(TABLE).update(row).eq('id', id).select('id, email, role, created_at, updated_at').maybeSingle();
     if (error) throw error;
     if (!data) return null;
-    return { ...rowToUser({ ...data, password_hash: '' }), passwordHash: '' };
+    const { passwordHash: __, ...user } = rowToUser({ ...data, password_hash: '' });
+    return user;
   }
   return Promise.resolve(usersStore.updateUser(id, input));
 }
