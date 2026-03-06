@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { getUserWithPasswordByEmail } from './users-store';
+import { getUserWithPasswordByEmail } from './users-db';
 import type { Role } from './user-types';
 
 const SALT_ROUNDS = 10;
@@ -16,7 +16,7 @@ export async function validateCredentials(
   email: string,
   password: string
 ): Promise<{ id: string; email: string; role: Role } | null> {
-  const user = getUserWithPasswordByEmail(email);
+  const user = await getUserWithPasswordByEmail(email);
   if (!user) return null;
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) return null;

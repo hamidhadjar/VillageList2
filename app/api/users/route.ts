@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { getAllUsers, createUser, getUserByEmail } from '@/lib/users-store';
+import { getAllUsers, createUser, getUserByEmail } from '@/lib/users-db';
 import { hashPassword } from '@/lib/auth';
 import type { Role } from '@/lib/user-types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   try {
-    const users = getAllUsers();
+    const users = await getAllUsers();
     return NextResponse.json(users);
   } catch (e) {
     return NextResponse.json({ error: 'Erreur' }, { status: 500 });
@@ -36,11 +36,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rôle invalide.' }, { status: 400 });
     }
     const normalizedEmail = email.trim().toLowerCase();
-    if (getUserByEmail(normalizedEmail)) {
+    const existing = await getUserByEmail(normalizedEmail);
+    if (existing) {
       return NextResponse.json({ error: 'Un utilisateur avec cet email existe déjà.' }, { status: 400 });
     }
     const passwordHash = await hashPassword(password.trim());
-    const user = createUser({
+    const user = await createUser({
       email: normalizedEmail,
       passwordHash,
       role,

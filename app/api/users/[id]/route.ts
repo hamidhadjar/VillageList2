@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { getUserById, updateUser, deleteUser, getUserByEmail } from '@/lib/users-store';
+import { getUserById, updateUser, deleteUser, getUserByEmail } from '@/lib/users-db';
 import { hashPassword } from '@/lib/auth';
 import type { Role } from '@/lib/user-types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
@@ -14,7 +14,7 @@ export async function GET(
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   const { id } = await params;
-  const user = getUserById(id);
+  const user = await getUserById(id);
   if (!user) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
   return NextResponse.json(user);
 }
@@ -33,7 +33,7 @@ export async function PUT(
   const updates: { email?: string; role?: Role; passwordHash?: string } = {};
   if (email !== undefined) {
     const normalizedEmail = email.trim().toLowerCase();
-    const existing = getUserByEmail(normalizedEmail);
+    const existing = await getUserByEmail(normalizedEmail);
     if (existing && existing.id !== id) {
       return NextResponse.json({ error: 'Un utilisateur avec cet email existe déjà.' }, { status: 400 });
     }
@@ -49,7 +49,7 @@ export async function PUT(
     updates.passwordHash = await hashPassword(password.trim());
   }
   try {
-    const user = updateUser(id, updates);
+    const user = await updateUser(id, updates);
     if (!user) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
     return NextResponse.json(user);
   } catch (e) {
@@ -77,7 +77,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Vous ne pouvez pas supprimer votre propre compte.' }, { status: 400 });
   }
   try {
-    const ok = deleteUser(id);
+    const ok = await deleteUser(id);
     if (!ok) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (e) {
