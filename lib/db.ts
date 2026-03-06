@@ -5,6 +5,10 @@ import { Biography } from './types';
 const TABLE = 'biographies';
 
 function rowToBio(row: Record<string, unknown>): Biography {
+  const imageUrls = Array.isArray(row.image_urls)
+    ? (row.image_urls as string[])
+    : (row.image_url ? [row.image_url as string] : []);
+  const imageUrl = imageUrls[0];
   return {
     id: row.id as string,
     name: row.name as string,
@@ -13,7 +17,8 @@ function rowToBio(row: Record<string, unknown>): Biography {
     deathDate: (row.death_date as string) ?? undefined,
     summary: row.summary as string,
     fullBio: row.full_bio as string,
-    imageUrl: (row.image_url as string) ?? undefined,
+    imageUrl,
+    imageUrls: imageUrls.length ? imageUrls : undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     lastEditedAt: (row.last_edited_at as string) ?? undefined,
@@ -54,15 +59,17 @@ export async function createBiography(
 ): Promise<Biography> {
   const supabase = getSupabase();
   if (supabase) {
-    const row = {
+    const imageUrls = input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : []);
+    const row: Record<string, unknown> = {
       name: input.name,
       title: input.title ?? null,
       birth_date: input.birthDate ?? null,
       death_date: input.deathDate ?? null,
       summary: input.summary,
       full_bio: input.fullBio,
-      image_url: input.imageUrl ?? null,
+      image_url: imageUrls[0] ?? null,
     };
+    if (imageUrls.length) row.image_urls = imageUrls;
     const { data, error } = await supabase.from(TABLE).insert(row).select().single();
     if (error) throw error;
     return rowToBio(data);
@@ -83,7 +90,13 @@ export async function updateBiography(
     if (input.deathDate !== undefined) row.death_date = input.deathDate;
     if (input.summary !== undefined) row.summary = input.summary;
     if (input.fullBio !== undefined) row.full_bio = input.fullBio;
-    if (input.imageUrl !== undefined) row.image_url = input.imageUrl ?? null;
+    if (input.imageUrls !== undefined) {
+      row.image_urls = input.imageUrls?.length ? input.imageUrls : [];
+      row.image_url = input.imageUrls?.[0] ?? null;
+    } else if (input.imageUrl !== undefined) {
+      row.image_url = input.imageUrl ?? null;
+      row.image_urls = input.imageUrl ? [input.imageUrl] : [];
+    }
     const now = new Date().toISOString();
     row.updated_at = now;
     if (input.lastEditedAt !== undefined) row.last_edited_at = input.lastEditedAt;

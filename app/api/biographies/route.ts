@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getAllBiographies, createBiography } from '@/lib/db';
-import { BiographyInput } from '@/lib/types';
+import { Biography, BiographyInput, getImageUrls, normalizeImageUrl } from '@/lib/types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 const EDIT_ROLES = ['edit', 'admin'];
@@ -9,7 +9,11 @@ const EDIT_ROLES = ['edit', 'admin'];
 export async function GET(_request: NextRequest) {
   try {
     const biographies = await getAllBiographies();
-    return NextResponse.json(biographies);
+    const normalized = biographies.map((bio) => {
+      const urls = getImageUrls(bio);
+      return { ...bio, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] } as Biography;
+    });
+    return NextResponse.json(normalized);
   } catch (e) {
     return NextResponse.json({ error: 'Impossible de charger les biographies' }, { status: 500 });
   }
@@ -22,13 +26,16 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = (await request.json()) as BiographyInput;
-    const { name, summary, fullBio, birthDate, deathDate, title, imageUrl } = body;
+    const { name, summary, fullBio, birthDate, deathDate, title, imageUrl, imageUrls } = body;
     if (!name?.trim() || !summary?.trim() || !fullBio?.trim()) {
       return NextResponse.json(
         { error: 'Le nom, le résumé et la biographie complète sont obligatoires.' },
         { status: 400 }
       );
     }
+    const urls = Array.isArray(imageUrls)
+      ? imageUrls.filter((u): u is string => typeof u === 'string').map((u) => normalizeImageUrl(u.trim())).filter((u) => u.length > 0)
+      : (imageUrl?.trim() ? [normalizeImageUrl(imageUrl.trim())] : []);
     const biography = await createBiography({
       name: name.trim(),
       summary: summary.trim(),
@@ -36,9 +43,11 @@ export async function POST(request: NextRequest) {
       birthDate: birthDate?.trim() || undefined,
       deathDate: deathDate?.trim() || undefined,
       title: title?.trim() || undefined,
-      imageUrl: imageUrl?.trim() || undefined,
+      imageUrl: urls[0],
+      imageUrls: urls.length ? [...urls] : undefined,
     });
-    return NextResponse.json(biography);
+    const outUrls = getImageUrls(biography);
+    return NextResponse.json({ ...biography, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });
   } catch (e) {
     return NextResponse.json({ error: 'Impossible de créer la biographie' }, { status: 500 });
   }

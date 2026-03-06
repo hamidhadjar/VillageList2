@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getBiographyById, updateBiography, deleteBiography } from '@/lib/db';
-import { Biography } from '@/lib/types';
+import { Biography, getImageUrls, normalizeImageUrl } from '@/lib/types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 const EDIT_ROLES = ['edit', 'admin'];
@@ -15,7 +15,8 @@ export async function GET(
   if (!biography) {
     return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
   }
-  return NextResponse.json(biography);
+  const urls = getImageUrls(biography);
+  return NextResponse.json({ ...biography, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] });
 }
 
 export async function PUT(
@@ -27,9 +28,18 @@ export async function PUT(
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   const { id } = await params;
-  const body = (await request.json()) as Partial<Biography> & { imageUrl?: string | null };
+  const body = (await request.json()) as Partial<Biography> & { imageUrl?: string | null; imageUrls?: string[] | null };
   const now = new Date().toISOString();
   const editorEmail = (token.email as string) ?? '';
+  const urls =
+    body.imageUrls !== undefined
+      ? (Array.isArray(body.imageUrls) ? body.imageUrls : [])
+          .filter((u): u is string => typeof u === 'string')
+          .map((u) => normalizeImageUrl(u.trim()))
+          .filter((u) => u.length > 0)
+      : body.imageUrl !== undefined
+        ? (body.imageUrl?.trim() ? [normalizeImageUrl(body.imageUrl.trim())] : [])
+        : undefined;
   const updated = await updateBiography(id, {
     name: body.name,
     summary: body.summary,
@@ -37,14 +47,16 @@ export async function PUT(
     birthDate: body.birthDate,
     deathDate: body.deathDate,
     title: body.title,
-    imageUrl: body.imageUrl,
+    imageUrl: urls !== undefined ? urls[0] : body.imageUrl,
+    imageUrls: urls,
     lastEditedAt: now,
     lastEditedBy: editorEmail,
   });
   if (!updated) {
     return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
   }
-  return NextResponse.json(updated);
+  const outUrls = getImageUrls(updated);
+  return NextResponse.json({ ...updated, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });
 }
 
 export async function DELETE(

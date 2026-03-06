@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Biography } from '@/lib/types';
+import { Biography, getImageUrls, normalizeImageUrl } from '@/lib/types';
 
 export default function EditPage() {
   const router = useRouter();
@@ -21,10 +21,9 @@ export default function EditPage() {
     summary: '',
     fullBio: '',
   });
-  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [removeImage, setRemoveImage] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,7 +37,7 @@ export default function EditPage() {
       const data = await res.json();
       if (!cancelled) {
         setBio(data);
-        setImageUrl(data.imageUrl);
+        setImageUrls(getImageUrls(data));
         setForm({
           name: data.name ?? '',
           title: data.title ?? '',
@@ -60,15 +59,20 @@ export default function EditPage() {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-      setRemoveImage(false);
-    } else {
-      setImageFile(null);
-      setImagePreview(null);
-    }
+    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'));
+    setPendingFiles((prev) => [...prev, ...files]);
+    setPendingPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+    e.target.value = '';
+  };
+
+  const removeExistingImage = (index: number) => {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removePendingImage = (index: number) => {
+    URL.revokeObjectURL(pendingPreviews[index]);
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+    setPendingPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,22 +80,32 @@ export default function EditPage() {
     setError('');
     setSaving(true);
     try {
-      let finalImageUrl: string | undefined | null = imageUrl;
-      if (removeImage) {
-        finalImageUrl = undefined;
-      } else if (imageFile) {
+      const uploaded: string[] = [];
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const file = pendingFiles[i];
         const formData = new FormData();
-        formData.append('file', imageFile);
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        formData.append('file', file);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+          cache: 'no-store',
+          headers: { 'X-Upload-Index': String(i) },
+        });
+        const data = await uploadRes.json().catch(() => ({}));
         if (!uploadRes.ok) {
-          const data = await uploadRes.json();
-          setError(data.error || 'Échec du téléchargement de l\'image.');
+          setError((data as { error?: string }).error || 'Échec du téléchargement d\'une image.');
           setSaving(false);
           return;
         }
-        const { url } = await uploadRes.json();
-        finalImageUrl = url;
+        const url = typeof (data as { url?: string }).url === 'string' ? (data as { url: string }).url.trim() : '';
+        if (!url) {
+          setError('Une image n\'a pas pu être enregistrée (réponse invalide).');
+          setSaving(false);
+          return;
+        }
+        uploaded.push(normalizeImageUrl(url));
       }
+      const finalImageUrls = [...imageUrls, ...uploaded];
       const res = await fetch(`/api/biographies/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -102,7 +116,7 @@ export default function EditPage() {
           deathDate: form.deathDate.trim() || undefined,
           summary: form.summary.trim(),
           fullBio: form.fullBio.trim(),
-          imageUrl: removeImage ? null : (finalImageUrl ?? imageUrl ?? null),
+          imageUrls: finalImageUrls,
         }),
       });
       const data = await res.json();
@@ -154,14 +168,40 @@ export default function EditPage() {
 
       <form onSubmit={handleSubmit} className="card">
         <div className="form-group">
-          <label>Photo</label>
-          {(imagePreview || (imageUrl && !removeImage)) && (
-            <div className="image-preview-wrap">
-              <img
-                src={imagePreview ?? imageUrl}
-                alt={form.name || 'Biographie'}
-                className="image-preview"
-              />
+          <label>Photos (plusieurs possibles)</label>
+          <p className="meta" style={{ marginTop: '0.25rem' }}>
+            Ajoutez des photos ou cliquez sur « Retirer » pour supprimer une photo avant enregistrement.
+          </p>
+          {(imageUrls.length > 0 || pendingPreviews.length > 0) && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem' }}>
+              {imageUrls.map((url, i) => (
+                <div key={`e-${i}`} style={{ position: 'relative', display: 'inline-block' }}>
+                  <img src={url} alt={form.name || 'Biographie'} className="image-preview" style={{ maxHeight: '120px', display: 'block' }} />
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.8rem', minWidth: 'auto', zIndex: 1 }}
+                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); removeExistingImage(i); }}
+                    aria-label="Retirer cette photo"
+                  >
+                    Retirer
+                  </button>
+                </div>
+              ))}
+              {pendingPreviews.map((src, i) => (
+                <div key={`p-${i}`} style={{ position: 'relative', display: 'inline-block' }}>
+                  <img src={src} alt={`Nouvelle ${i + 1}`} className="image-preview" style={{ maxHeight: '120px', display: 'block' }} />
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.8rem', minWidth: 'auto', zIndex: 1 }}
+                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); removePendingImage(i); }}
+                    aria-label="Retirer cette photo"
+                  >
+                    Retirer
+                  </button>
+                </div>
+              ))}
             </div>
           )}
           <input
@@ -169,24 +209,10 @@ export default function EditPage() {
             name="picture"
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
+            multiple
             onChange={handleImageChange}
             style={{ marginTop: '0.5rem' }}
           />
-          {(imageUrl || imageFile || imagePreview) && !removeImage && (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ marginTop: '0.5rem' }}
-              onClick={() => {
-                setImageFile(null);
-                setImagePreview(null);
-                setImageUrl(undefined);
-                setRemoveImage(true);
-              }}
-            >
-              Supprimer la photo
-            </button>
-          )}
         </div>
         <div className="form-group">
           <label htmlFor="name">Nom *</label>

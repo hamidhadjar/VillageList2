@@ -44,8 +44,11 @@ export function createBiography(input: Omit<Biography, 'id' | 'createdAt' | 'upd
   const items = readBiographies();
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
+  const imageUrlsCopy = input.imageUrls && input.imageUrls.length > 0 ? [...input.imageUrls] : input.imageUrls;
   const newBio: Biography = {
     ...input,
+    imageUrls: imageUrlsCopy,
+    imageUrl: imageUrlsCopy?.[0] ?? input.imageUrl,
     id,
     createdAt: now,
     updatedAt: now,
@@ -60,9 +63,15 @@ export function updateBiography(id: string, input: Partial<Biography>): Biograph
   const index = items.findIndex((b) => b.id === id);
   if (index === -1) return null;
   const now = new Date().toISOString();
+  const imageUrlsCopy = input.imageUrls && input.imageUrls.length > 0 ? [...input.imageUrls] : input.imageUrls;
+  const imageUrl = input.imageUrls !== undefined
+    ? (imageUrlsCopy?.length ? imageUrlsCopy[0] : undefined)
+    : (input.imageUrl ?? items[index].imageUrl);
   items[index] = {
     ...items[index],
     ...input,
+    imageUrls: imageUrlsCopy,
+    imageUrl,
     id,
     updatedAt: now,
     lastEditedAt: input.lastEditedAt ?? now,

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
-import { Biography } from '@/lib/types';
+import { Biography, getImageUrls } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
 
 const CAN_EDIT: Role[] = ['edit', 'admin'];
@@ -47,7 +47,8 @@ export default function ViewBioPage() {
       }
       const data = await res.json();
       if (!cancelled) {
-        setBio(data);
+        const urls = getImageUrls(data);
+        setBio({ ...data, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] });
       }
       setLoading(false);
     }
@@ -97,11 +98,28 @@ export default function ViewBioPage() {
       </div>
 
       <article className="card bio-view">
-        {bio.imageUrl && (
-          <div className="bio-view-image-wrap">
-            <img src={bio.imageUrl} alt={bio.name} className="bio-view-image" />
-          </div>
-        )}
+        {(() => {
+          const imageUrls = getImageUrls(bio);
+          if (imageUrls.length === 0) return null;
+          return (
+            <div className="bio-view-image-gallery" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              {imageUrls.map((url, i) => (
+                <div key={`img-${i}-${url}`} className="bio-view-image-wrap" style={{ minHeight: '80px' }}>
+                  <img
+                    src={url}
+                    alt={`${bio.name} ${i + 1}`}
+                    className="bio-view-image"
+                    style={{ width: '100%', height: 'auto', objectFit: 'cover', display: 'block' }}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         <h2 className="bio-view-name">{bio.name}</h2>
         {bio.title && <p className="bio-view-title">{bio.title}</p>}
         {(bio.birthDate || bio.deathDate) && (

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
-import { Biography } from '@/lib/types';
+import { Biography, getImageUrls } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
 
 type SortOption = 'name-asc' | 'name-desc' | 'death-asc' | 'death-desc';
@@ -248,8 +248,8 @@ export default function HomePage() {
               return (
               <div key={bio.id} className="card gallery-card">
                 <Link href={`/bio/${bio.id}`} className="gallery-media" aria-label={`Voir ${bio.name}`}>
-                  {bio.imageUrl ? (
-                    <img src={bio.imageUrl} alt="" className="gallery-image" />
+                  {getImageUrls(bio)[0] ? (
+                    <img src={getImageUrls(bio)[0]} alt="" className="gallery-image" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                   ) : (
                     <div className="gallery-placeholder" aria-hidden="true">
                       <span>{bio.name.trim().slice(0, 1).toUpperCase()}</span>
@@ -328,9 +328,9 @@ export default function HomePage() {
               return (
               <li key={bio.id} className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-                  {bio.imageUrl && (
+                  {getImageUrls(bio)[0] && (
                     <div className="bio-thumb-wrap">
-                      <img src={bio.imageUrl} alt="" className="bio-thumb" />
+                      <img src={getImageUrls(bio)[0]} alt="" className="bio-thumb" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { normalizeImageUrl } from '@/lib/types';
 
 export default function AddPage() {
   const router = useRouter();
@@ -16,8 +17,8 @@ export default function AddPage() {
     summary: '',
     fullBio: '',
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -25,14 +26,18 @@ export default function AddPage() {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    } else {
-      setImageFile(null);
-      setImagePreview(null);
-    }
+    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+    const newPreviews = files.map((f) => URL.createObjectURL(f));
+    setImageFiles((prev) => [...prev, ...files]);
+    setImagePreviews((prev) => [...prev, ...newPreviews]);
+    e.target.value = '';
+  };
+
+  const removeImageAt = (index: number) => {
+    URL.revokeObjectURL(imagePreviews[index]);
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,19 +45,35 @@ export default function AddPage() {
     setError('');
     setSaving(true);
     try {
-      let imageUrl: string | undefined;
-      if (imageFile) {
+      const imageUrls: string[] = [];
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
         const formData = new FormData();
-        formData.append('file', imageFile);
-        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        formData.append('file', file);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+          cache: 'no-store',
+          headers: { 'X-Upload-Index': String(i) },
+        });
+        const data = await uploadRes.json().catch(() => ({}));
         if (!uploadRes.ok) {
-          const data = await uploadRes.json();
-          setError(data.error || 'Échec du téléchargement de l\'image.');
+          setError((data as { error?: string }).error || 'Échec du téléchargement d\'une image.');
           setSaving(false);
           return;
         }
-        const { url } = await uploadRes.json();
-        imageUrl = url;
+        const url = typeof (data as { url?: string }).url === 'string' ? (data as { url: string }).url.trim() : '';
+        if (!url) {
+          setError('Une image n\'a pas pu être enregistrée (réponse invalide).');
+          setSaving(false);
+          return;
+        }
+        imageUrls.push(normalizeImageUrl(url));
+      }
+      if (imageUrls.length !== imageFiles.length) {
+        setError(`${imageUrls.length}/${imageFiles.length} images enregistrées. Réessayez.`);
+        setSaving(false);
+        return;
       }
       const res = await fetch('/api/biographies', {
         method: 'POST',
@@ -64,7 +85,7 @@ export default function AddPage() {
           deathDate: form.deathDate.trim() || undefined,
           summary: form.summary.trim(),
           fullBio: form.fullBio.trim(),
-          imageUrl,
+          imageUrls: imageUrls.length ? imageUrls : undefined,
         }),
       });
       const data = await res.json();
@@ -89,17 +110,34 @@ export default function AddPage() {
 
       <form onSubmit={handleSubmit} className="card">
         <div className="form-group">
-          <label htmlFor="picture">Photo</label>
+          <label htmlFor="picture">Photos (plusieurs possibles)</label>
           <input
             id="picture"
             name="picture"
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
+            multiple
             onChange={handleImageChange}
           />
-          {imagePreview && (
-            <div className="image-preview-wrap">
-              <img src={imagePreview} alt="Aperçu" className="image-preview" />
+          <p className="meta" style={{ marginTop: '0.25rem' }}>
+            Sélectionnez plusieurs fichiers ou ajoutez des photos en plusieurs fois. Cliquez sur « Retirer » pour enlever une photo avant enregistrement.
+          </p>
+          {imagePreviews.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem' }}>
+              {imagePreviews.map((src, i) => (
+                <div key={i} style={{ position: 'relative', display: 'inline-block' }}>
+                  <img src={src} alt={`Aperçu ${i + 1}`} className="image-preview" style={{ maxHeight: '120px', display: 'block' }} />
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.8rem', minWidth: 'auto', zIndex: 1 }}
+                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); removeImageAt(i); }}
+                    aria-label="Retirer cette photo"
+                  >
+                    Retirer
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
