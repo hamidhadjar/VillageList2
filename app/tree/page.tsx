@@ -31,24 +31,42 @@ function PersonCard({ bio }: { bio: Biography }) {
   );
 }
 
-function TreePerson({
-  bio,
-  map,
-  depth,
-}: {
-  bio: Biography;
-  map: Map<string, Biography>;
-  depth: number;
-}) {
+/** One person in the tree (card only) and below them their sons as a single row of siblings. No duplicate "brothers" row - brothers are the other children in the same row. */
+function TreePersonCell({ bio, map }: { bio: Biography; map: Map<string, Biography> }) {
+  const sonIds = bio.sonIds ?? [];
+  const sons = sonIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
+
+  return (
+    <div className="tree-gen-branch">
+      <div className="tree-gen-connector-vert" aria-hidden="true" />
+      <div className="tree-gen-node">
+        <PersonCard bio={bio} />
+        {sons.length > 0 && (
+          <>
+            <div className="tree-gen-connector-down" aria-hidden="true" />
+            <div className="tree-gen-children-row">
+              {sons.map((son) => (
+                <TreePersonCell key={son.id} bio={son} map={map} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Root node: can show brothers on same row (only for roots). Sons are below, connected to the father. */
+function TreeRoot({ bio, map }: { bio: Biography; map: Map<string, Biography> }) {
   const sonIds = bio.sonIds ?? [];
   const brotherIds = bio.brotherIds ?? [];
   const sons = sonIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
   const brothers = brotherIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
-  const hasSiblings = brothers.length > 0;
+  const hasBrothers = brothers.length > 0;
 
   return (
     <div className="tree-gen-node">
-      {hasSiblings ? (
+      {hasBrothers ? (
         <div className="tree-gen-siblings-row">
           <div className="tree-gen-self-cell">
             <PersonCard bio={bio} />
@@ -57,10 +75,7 @@ function TreePerson({
                 <div className="tree-gen-connector-down" aria-hidden="true" />
                 <div className="tree-gen-children-row">
                   {sons.map((son) => (
-                    <div key={son.id} className="tree-gen-branch">
-                      <div className="tree-gen-connector-vert" aria-hidden="true" />
-                      <TreePerson bio={son} map={map} depth={depth + 1} />
-                    </div>
+                    <TreePersonCell key={son.id} bio={son} map={map} />
                   ))}
                 </div>
               </>
@@ -80,10 +95,7 @@ function TreePerson({
               <div className="tree-gen-connector-down" aria-hidden="true" />
               <div className="tree-gen-children-row">
                 {sons.map((son) => (
-                  <div key={son.id} className="tree-gen-branch">
-                    <div className="tree-gen-connector-vert" aria-hidden="true" />
-                    <TreePerson bio={son} map={map} depth={depth + 1} />
-                  </div>
+                  <TreePersonCell key={son.id} bio={son} map={map} />
                 ))}
               </div>
             </>
@@ -120,7 +132,14 @@ export default function TreePage() {
   const isSonOfSomeone = (b: Biography) =>
     biographies.some((other) => (other.sonIds ?? []).includes(b.id));
 
-  const roots = biographies.filter((b) => hasRelation(b) && !isSonOfSomeone(b));
+  let roots = biographies.filter((b) => hasRelation(b) && !isSonOfSomeone(b));
+  const rootIds = new Set(roots.map((r) => r.id));
+  roots = roots.filter((r) => {
+    const brothersInRoots = (r.brotherIds ?? []).filter((id) => rootIds.has(id));
+    if (brothersInRoots.length === 0) return true;
+    const allIds = [r.id, ...brothersInRoots].sort();
+    return r.id === allIds[0];
+  });
 
   if (loading) {
     return (
@@ -167,7 +186,7 @@ export default function TreePage() {
       </p>
       <div className="tree-gen-forest">
         {roots.map((bio) => (
-          <TreePerson key={bio.id} bio={bio} map={map} depth={0} />
+          <TreeRoot key={bio.id} bio={bio} map={map} />
         ))}
       </div>
     </div>
