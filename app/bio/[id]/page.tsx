@@ -89,6 +89,24 @@ export default function ViewBioPage() {
           <Link href="/" className="btn btn-ghost">
             Retour à la liste
           </Link>
+          <a
+            href={`/api/biographies/${bio.id}/export?format=pdf`}
+            className="btn btn-ghost"
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Télécharger PDF
+          </a>
+          <a
+            href={`/api/biographies/${bio.id}/export?format=docx`}
+            className="btn btn-ghost"
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Télécharger Word
+          </a>
           {canEdit && (
             <Link href={`/edit/${bio.id}`} className="btn btn-primary">
               Modifier

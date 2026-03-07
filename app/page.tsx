@@ -46,6 +46,7 @@ export default function HomePage() {
   const { showLastEdited, setShowLastEdited } = useShowLastEdited();
   const role = (session?.user as { role?: Role })?.role;
   const canEdit = role && CAN_EDIT.includes(role);
+  const canDelete = role === 'admin';
 
   const [biographies, setBiographies] = useState<Biography[]>([]);
   const [loading, setLoading] = useState(true);
@@ -290,19 +291,21 @@ export default function HomePage() {
                         <Link href={`/edit/${bio.id}`} className="btn btn-ghost">
                           Modifier
                         </Link>
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          onClick={() => setDeleteId(bio.id)}
-                        >
-                          Supprimer
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            onClick={() => setDeleteId(bio.id)}
+                          >
+                            Supprimer
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
                 </div>
 
-                {deleteId === bio.id && (
+                {canDelete && deleteId === bio.id && (
                   <div className="overlay" onClick={() => setDeleteId(null)} role="dialog" aria-modal="true">
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                       <h3>Supprimer cette biographie ?</h3>
@@ -368,20 +371,22 @@ export default function HomePage() {
                       <Link href={`/edit/${bio.id}`} className="btn btn-ghost">
                         Modifier
                       </Link>
-                      <button
-                        type="button"
-                        className="btn btn-danger"
-                        onClick={() => setDeleteId(bio.id)}
-                        aria-label="Supprimer"
-                      >
-                        Supprimer
-                      </button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          onClick={() => setDeleteId(bio.id)}
+                          aria-label="Supprimer"
+                        >
+                          Supprimer
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
               </div>
 
-              {deleteId === bio.id && (
+              {canDelete && deleteId === bio.id && (
                 <div className="overlay" onClick={() => setDeleteId(null)} role="dialog" aria-modal="true">
                   <div className="modal" onClick={(e) => e.stopPropagation()}>
                     <h3>Supprimer cette biographie ?</h3>

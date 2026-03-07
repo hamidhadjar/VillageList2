@@ -68,7 +68,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req: request, secret: getNextAuthSecret() });
-  if (!token || !EDIT_ROLES.includes(token.role as string)) {
+  if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   const { id } = await params;
