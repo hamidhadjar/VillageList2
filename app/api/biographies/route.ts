@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { getAllBiographies, createBiography } from '@/lib/db';
+import { getAllBiographies, createBiography, getBiographyById, updateBiography } from '@/lib/db';
 import { Biography, BiographyInput, getImageUrls, normalizeImageUrl } from '@/lib/types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
@@ -51,6 +51,17 @@ export async function POST(request: NextRequest) {
       sonIds: sonIdsArr?.length ? sonIdsArr : undefined,
       brotherIds: brotherIdsArr?.length ? brotherIdsArr : undefined,
     });
+    // Auto link father → son: add this biography to the father's son_ids
+    const fid = fatherId?.trim();
+    if (fid && biography.id) {
+      const father = await getBiographyById(fid);
+      if (father) {
+        const existing = father.sonIds ?? [];
+        if (!existing.includes(biography.id)) {
+          await updateBiography(fid, { sonIds: [...existing, biography.id] });
+        }
+      }
+    }
     const outUrls = getImageUrls(biography);
     return NextResponse.json({ ...biography, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });
   } catch (e) {

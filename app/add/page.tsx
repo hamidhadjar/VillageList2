@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { normalizeImageUrl } from '@/lib/types';
 import type { Biography } from '@/lib/types';
+import { SearchablePersonMultiSelect } from '@/app/components/SearchablePersonMultiSelect';
 
 export default function AddPage() {
   const router = useRouter();
@@ -217,40 +218,22 @@ export default function AddPage() {
             ))}
           </select>
         </div>
-        <div className="form-group">
-          <label htmlFor="sonIds">Fils (plusieurs possibles)</label>
-          <p className="meta" style={{ marginTop: '0.25rem' }}>Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs.</p>
-          <select
-            id="sonIds"
-            multiple
-            size={4}
-            value={sonIds}
-            onChange={(e) => setSonIds(Array.from(e.target.selectedOptions, (o) => o.value))}
-            className="sort-select"
-            style={{ width: '100%' }}
-          >
-            {allBiographies.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="brotherIds">Frères (plusieurs possibles)</label>
-          <p className="meta" style={{ marginTop: '0.25rem' }}>Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs.</p>
-          <select
-            id="brotherIds"
-            multiple
-            size={4}
-            value={brotherIds}
-            onChange={(e) => setBrotherIds(Array.from(e.target.selectedOptions, (o) => o.value))}
-            className="sort-select"
-            style={{ width: '100%' }}
-          >
-            {allBiographies.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-        </div>
+        <SearchablePersonMultiSelect
+          id="sonIds"
+          label="Fils (plusieurs possibles)"
+          options={allBiographies.map((b) => ({ id: b.id, name: b.name }))}
+          value={sonIds}
+          onChange={setSonIds}
+          searchPlaceholder="Rechercher un fils…"
+        />
+        <SearchablePersonMultiSelect
+          id="brotherIds"
+          label="Frères (plusieurs possibles)"
+          options={allBiographies.map((b) => ({ id: b.id, name: b.name }))}
+          value={brotherIds}
+          onChange={setBrotherIds}
+          searchPlaceholder="Rechercher un frère…"
+        />
         <div className="form-group">
           <label htmlFor="summary">Résumé *</label>
           <textarea

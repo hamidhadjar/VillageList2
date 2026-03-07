@@ -50,6 +50,8 @@ export async function PUT(
   const body = (await request.json()) as Partial<Biography> & { imageUrl?: string | null; imageUrls?: string[] | null };
   const now = new Date().toISOString();
   const editorEmail = (token.email as string) ?? '';
+  const newFatherId = body.fatherId !== undefined ? (body.fatherId?.trim() || undefined) : undefined;
+  const fatherSent = body.fatherId !== undefined;
   const urls =
     body.imageUrls !== undefined
       ? (Array.isArray(body.imageUrls) ? body.imageUrls : [])
@@ -62,6 +64,9 @@ export async function PUT(
   const sonIdsArr = body.sonIds !== undefined && Array.isArray(body.sonIds) ? body.sonIds.filter((id): id is string => typeof id === 'string') : undefined;
   const brotherIdsArr = body.brotherIds !== undefined && Array.isArray(body.brotherIds) ? body.brotherIds.filter((id): id is string => typeof id === 'string') : undefined;
   try {
+    const existing = fatherSent ? await getBiographyById(id) : null;
+    const oldFatherId = existing?.fatherId?.trim();
+
     const updated = await updateBiography(id, {
       name: body.name,
       summary: body.summary,
@@ -71,7 +76,7 @@ export async function PUT(
       title: body.title,
       imageUrl: urls !== undefined ? urls[0] : body.imageUrl,
       imageUrls: urls,
-      fatherId: body.fatherId !== undefined ? (body.fatherId?.trim() || undefined) : undefined,
+      fatherId: newFatherId,
       sonIds: sonIdsArr,
       brotherIds: brotherIdsArr,
       lastEditedAt: now,
@@ -79,6 +84,25 @@ export async function PUT(
     });
     if (!updated) {
       return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    }
+    // Auto link father → son: keep father's son_ids in sync with fatherId on this bio
+    if (oldFatherId !== newFatherId) {
+      if (oldFatherId) {
+        const oldFather = await getBiographyById(oldFatherId);
+        if (oldFather) {
+          const prevSons = (oldFather.sonIds ?? []).filter((sid) => sid !== id);
+          await updateBiography(oldFatherId, { sonIds: prevSons.length ? prevSons : [] });
+        }
+      }
+      if (newFatherId) {
+        const newFather = await getBiographyById(newFatherId);
+        if (newFather) {
+          const existingSons = newFather.sonIds ?? [];
+          if (!existingSons.includes(id)) {
+            await updateBiography(newFatherId, { sonIds: [...existingSons, id] });
+          }
+        }
+      }
     }
     const outUrls = getImageUrls(updated);
     return NextResponse.json({ ...updated, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });

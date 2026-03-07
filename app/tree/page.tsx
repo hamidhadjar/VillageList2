@@ -67,25 +67,30 @@ function TreeRoot({ bio, map }: { bio: Biography; map: Map<string, Biography> })
   return (
     <div className="tree-gen-node">
       {hasBrothers ? (
-        <div className="tree-gen-siblings-row">
-          <div className="tree-gen-self-cell">
-            <PersonCard bio={bio} />
-            {sons.length > 0 && (
-              <>
-                <div className="tree-gen-connector-down" aria-hidden="true" />
-                <div className="tree-gen-children-row">
-                  {sons.map((son) => (
-                    <TreePersonCell key={son.id} bio={son} map={map} />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          {brothers.map((b) => (
-            <div key={b.id} className="tree-gen-brother-cell">
-              <PersonCard bio={b} />
+        <div className="tree-gen-siblings-wrap">
+          <div className="tree-gen-siblings-connector-h" aria-hidden="true" />
+          <div className="tree-gen-siblings-row">
+            <div className="tree-gen-self-cell">
+              <div className="tree-gen-connector-vert" aria-hidden="true" />
+              <PersonCard bio={bio} />
+              {sons.length > 0 && (
+                <>
+                  <div className="tree-gen-connector-down" aria-hidden="true" />
+                  <div className="tree-gen-children-row">
+                    {sons.map((son) => (
+                      <TreePersonCell key={son.id} bio={son} map={map} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          ))}
+            {brothers.map((b) => (
+              <div key={b.id} className="tree-gen-brother-cell">
+                <div className="tree-gen-connector-vert" aria-hidden="true" />
+                <PersonCard bio={b} />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <>

@@ -665,7 +665,23 @@ input, textarea {
   flex-shrink: 0;
 }
 
-/* Siblings row: person + brothers on the same level; sons connect below the person only */
+/* Siblings row (brothers with no father): horizontal line connecting them, then vertical drop to each */
+.tree-gen-siblings-wrap {
+  position: relative;
+}
+
+.tree-gen-siblings-connector-h {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  min-width: 120px;
+  max-width: 420px;
+  height: 2px;
+  background: var(--border);
+}
+
 .tree-gen-siblings-row {
   display: flex;
   flex-direction: row;
@@ -673,6 +689,11 @@ input, textarea {
   align-items: flex-start;
   gap: 1.5rem;
   flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.tree-gen-siblings-row .tree-gen-connector-vert {
+  margin-bottom: 0;
 }
 
 .tree-gen-self-cell {
@@ -685,4 +706,153 @@ input, textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+/* Searchable multi-select (sons, brothers) – touch-friendly */
+.searchable-multi-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.searchable-multi-select-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.searchable-multi-select-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.6rem;
+  background: var(--border);
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.searchable-multi-select-chip-label {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchable-multi-select-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--muted);
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.searchable-multi-select-chip-remove:hover,
+.searchable-multi-select-chip-remove:focus {
+  background: var(--danger);
+}
+
+.searchable-multi-select-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  background: #fff;
+}
+
+.searchable-multi-select-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.searchable-multi-select-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  max-height: 12rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.searchable-multi-select-empty {
+  padding: 1rem;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.searchable-multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.searchable-multi-select-option:last-child {
+  border-bottom: none;
+}
+
+.searchable-multi-select-option:hover,
+.searchable-multi-select-option:focus {
+  background: rgba(139, 105, 20, 0.08);
+  outline: none;
+}
+
+.searchable-multi-select-option.is-selected {
+  background: rgba(139, 105, 20, 0.12);
+}
+
+.searchable-multi-select-option-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #fff;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.searchable-multi-select-option.is-selected .searchable-multi-select-option-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.searchable-multi-select-option-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  .searchable-multi-select-option {
+    min-height: 3rem;
+    padding: 0.65rem 0.75rem;
+  }
 }
