@@ -7,6 +7,30 @@ import { getImageUrls } from '@/lib/types';
 
 const AVATAR_SIZE = 88;
 
+function PersonCard({ bio }: { bio: Biography }) {
+  const imageUrls = getImageUrls(bio);
+  const firstImage = imageUrls[0];
+  return (
+    <Link href={`/bio/${bio.id}`} className="tree-gen-person">
+      <div className="tree-gen-avatar-wrap">
+        {firstImage ? (
+          <img
+            src={firstImage}
+            alt=""
+            className="tree-gen-avatar"
+            width={AVATAR_SIZE}
+            height={AVATAR_SIZE}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : null}
+        {!firstImage && <div className="tree-gen-avatar-placeholder" />}
+      </div>
+      <span className="tree-gen-label">{bio.name}</span>
+      {bio.deathDate && <span className="tree-gen-meta">{bio.deathDate}</span>}
+    </Link>
+  );
+}
+
 function TreePerson({
   bio,
   map,
@@ -20,47 +44,50 @@ function TreePerson({
   const brotherIds = bio.brotherIds ?? [];
   const sons = sonIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
   const brothers = brotherIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
-  const imageUrls = getImageUrls(bio);
-  const firstImage = imageUrls[0];
+  const hasSiblings = brothers.length > 0;
 
   return (
     <div className="tree-gen-node">
-      <Link href={`/bio/${bio.id}`} className="tree-gen-person">
-        <div className="tree-gen-avatar-wrap">
-          {firstImage ? (
-            <img
-              src={firstImage}
-              alt=""
-              className="tree-gen-avatar"
-              width={AVATAR_SIZE}
-              height={AVATAR_SIZE}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-          ) : null}
-          {!firstImage && <div className="tree-gen-avatar-placeholder" />}
-        </div>
-        <span className="tree-gen-label">{bio.name}</span>
-        {bio.deathDate && <span className="tree-gen-meta">{bio.deathDate}</span>}
-        {brothers.length > 0 && (
-          <span className="tree-gen-brothers">
-            Frères : {brothers.map((b, i) => (
-              <span key={b.id}>{i > 0 ? ', ' : ''}<Link href={`/bio/${b.id}`} onClick={(ev) => ev.stopPropagation()}>{b.name}</Link></span>
-            ))}
-          </span>
-        )}
-      </Link>
-
-      {sons.length > 0 && (
-        <>
-          <div className="tree-gen-connector-down" aria-hidden="true" />
-          <div className="tree-gen-children-row">
-            {sons.map((son) => (
-              <div key={son.id} className="tree-gen-branch">
-                <div className="tree-gen-connector-vert" aria-hidden="true" />
-                <TreePerson bio={son} map={map} depth={depth + 1} />
-              </div>
-            ))}
+      {hasSiblings ? (
+        <div className="tree-gen-siblings-row">
+          <div className="tree-gen-self-cell">
+            <PersonCard bio={bio} />
+            {sons.length > 0 && (
+              <>
+                <div className="tree-gen-connector-down" aria-hidden="true" />
+                <div className="tree-gen-children-row">
+                  {sons.map((son) => (
+                    <div key={son.id} className="tree-gen-branch">
+                      <div className="tree-gen-connector-vert" aria-hidden="true" />
+                      <TreePerson bio={son} map={map} depth={depth + 1} />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
+          {brothers.map((b) => (
+            <div key={b.id} className="tree-gen-brother-cell">
+              <PersonCard bio={b} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          <PersonCard bio={bio} />
+          {sons.length > 0 && (
+            <>
+              <div className="tree-gen-connector-down" aria-hidden="true" />
+              <div className="tree-gen-children-row">
+                {sons.map((son) => (
+                  <div key={son.id} className="tree-gen-branch">
+                    <div className="tree-gen-connector-vert" aria-hidden="true" />
+                    <TreePerson bio={son} map={map} depth={depth + 1} />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
@@ -136,7 +163,7 @@ export default function TreePage() {
         <Link href="/" className="btn btn-ghost">Retour à la liste</Link>
       </div>
       <p className="meta" style={{ marginBottom: '1.5rem' }}>
-        Les personnes avec un père renseigné apparaissent sous leur père. Les frères sont indiqués à côté de chaque nom.
+        Les fils sont reliés au père sous lui ; les frères apparaissent sur la même ligne (même niveau).
       </p>
       <div className="tree-gen-forest">
         {roots.map((bio) => (
