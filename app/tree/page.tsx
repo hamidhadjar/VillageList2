@@ -31,9 +31,13 @@ function PersonCard({ bio }: { bio: Biography }) {
   );
 }
 
+function normId(b: Biography): string {
+  return (b.id != null ? String(b.id) : '').trim();
+}
+
 /** One person in the tree (card only) and below them their sons as a single row of siblings. No duplicate "brothers" row - brothers are the other children in the same row. */
 function TreePersonCell({ bio, map, childrenMap }: { bio: Biography; map: Map<string, Biography>; childrenMap: Map<string, Biography[]> }) {
-  const sons = childrenMap.get(bio.id) ?? [];
+  const sons = childrenMap.get(normId(bio)) ?? []; // normId so numeric ids from API match map keys
 
   return (
     <div className="tree-gen-branch">
@@ -57,9 +61,9 @@ function TreePersonCell({ bio, map, childrenMap }: { bio: Biography; map: Map<st
 
 /** Root node: can show brothers on same row (only for roots). Sons are below, connected to the father. */
 function TreeRoot({ bio, map, childrenMap }: { bio: Biography; map: Map<string, Biography>; childrenMap: Map<string, Biography[]> }) {
-  const sons = childrenMap.get(bio.id) ?? [];
+  const sons = childrenMap.get(normId(bio)) ?? [];
   const brotherIds = bio.brotherIds ?? [];
-  const brothers = brotherIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
+  const brothers = brotherIds.map((id) => map.get((id != null ? String(id) : '').trim())).filter((b): b is Biography => b != null);
   const hasBrothers = brothers.length > 0;
 
   return (
@@ -125,40 +129,59 @@ export default function TreePage() {
     return () => { cancelled = true; };
   }, []);
 
-  const map = new Map(biographies.map((b) => [b.id, b]));
+  // Normalize IDs to string (API/DB may return numbers)
+  const toId = (x: string | number | undefined | null): string => (x == null ? '' : String(x).trim());
+  const map = new Map<string, Biography>();
+  for (const b of biographies) {
+    const id = toId(b.id) || String(b.id);
+    if (id) map.set(id, b);
+  }
 
-  // Children = union of parent.sonIds and everyone who has parent as fatherId (so tree is correct even if one side is missing)
+  // Children = union of parent.sonIds and everyone who has parent as fatherId
   const childrenMap = new Map<string, Biography[]>();
   for (const bio of biographies) {
-    const fromSonIds = (bio.sonIds ?? []).map((id) => map.get(id)).filter((b): b is Biography => b != null);
-    const fromFatherId = biographies.filter((b) => (b.fatherId ?? '').trim() === bio.id);
+    const parentId = toId(bio.id);
+    if (!parentId) continue;
+    const fromSonIds = (bio.sonIds ?? [])
+      .map((id) => map.get(toId(id)))
+      .filter((b): b is Biography => b != null);
+    const fromFatherId = biographies.filter((b) => toId(b.fatherId) === parentId);
     const seen = new Set<string>();
     const merged: Biography[] = [];
     for (const b of [...fromSonIds, ...fromFatherId]) {
-      if (seen.has(b.id)) continue;
-      seen.add(b.id);
+      const bid = toId(b.id) || b.id;
+      if (seen.has(bid)) continue;
+      seen.add(bid);
       merged.push(b);
     }
-    if (merged.length > 0) childrenMap.set(bio.id, merged);
+    if (merged.length > 0) childrenMap.set(parentId, merged);
   }
 
-  const hasRelation = (b: Biography) =>
-    (b.fatherId && b.fatherId.trim()) ||
-    (b.sonIds && b.sonIds.length > 0) ||
-    (b.brotherIds && b.brotherIds.length > 0);
+  // Has any family link (including "someone has me as father" so fathers with only children appear)
+  const hasRelation = (b: Biography) => {
+    const id = toId(b.id);
+    if (!id) return false;
+    if (toId(b.fatherId) || (b.sonIds && b.sonIds.length > 0) || (b.brotherIds && b.brotherIds.length > 0))
+      return true;
+    return biographies.some((o) => toId(o.fatherId) === id);
+  };
 
-  // Not a root if someone lists them as son, or if they have a father (so they appear only under the father)
-  const isSonOfSomeone = (b: Biography) =>
-    (b.fatherId != null && b.fatherId.trim() !== '') ||
-    biographies.some((other) => (other.sonIds ?? []).includes(b.id));
+  // Not a root only if their father exists in the list (then they appear under him). If father is missing, show as root.
+  const isSonOfSomeone = (b: Biography) => {
+    const fatherId = toId(b.fatherId);
+    if (fatherId && map.has(fatherId)) return true;
+    const myId = toId(b.id) || String(b.id);
+    return biographies.some((other) => (other.sonIds ?? []).map(toId).includes(myId));
+  };
 
   let roots = biographies.filter((b) => hasRelation(b) && !isSonOfSomeone(b));
-  const rootIds = new Set(roots.map((r) => r.id));
+  const rootIds = new Set(roots.map((r) => toId(r.id) || String(r.id)));
   roots = roots.filter((r) => {
-    const brothersInRoots = (r.brotherIds ?? []).filter((id) => rootIds.has(id));
+    const myId = toId(r.id) || String(r.id);
+    const brothersInRoots = (r.brotherIds ?? []).map(toId).filter((id) => id && rootIds.has(id));
     if (brothersInRoots.length === 0) return true;
-    const allIds = [r.id, ...brothersInRoots].sort();
-    return r.id === allIds[0];
+    const allIds = [myId, ...brothersInRoots].sort();
+    return myId === allIds[0];
   });
 
   if (loading) {
