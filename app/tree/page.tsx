@@ -32,9 +32,8 @@ function PersonCard({ bio }: { bio: Biography }) {
 }
 
 /** One person in the tree (card only) and below them their sons as a single row of siblings. No duplicate "brothers" row - brothers are the other children in the same row. */
-function TreePersonCell({ bio, map }: { bio: Biography; map: Map<string, Biography> }) {
-  const sonIds = bio.sonIds ?? [];
-  const sons = sonIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
+function TreePersonCell({ bio, map, childrenMap }: { bio: Biography; map: Map<string, Biography>; childrenMap: Map<string, Biography[]> }) {
+  const sons = childrenMap.get(bio.id) ?? [];
 
   return (
     <div className="tree-gen-branch">
@@ -46,7 +45,7 @@ function TreePersonCell({ bio, map }: { bio: Biography; map: Map<string, Biograp
             <div className="tree-gen-connector-down" aria-hidden="true" />
             <div className="tree-gen-children-row">
               {sons.map((son) => (
-                <TreePersonCell key={son.id} bio={son} map={map} />
+                <TreePersonCell key={son.id} bio={son} map={map} childrenMap={childrenMap} />
               ))}
             </div>
           </>
@@ -57,10 +56,9 @@ function TreePersonCell({ bio, map }: { bio: Biography; map: Map<string, Biograp
 }
 
 /** Root node: can show brothers on same row (only for roots). Sons are below, connected to the father. */
-function TreeRoot({ bio, map }: { bio: Biography; map: Map<string, Biography> }) {
-  const sonIds = bio.sonIds ?? [];
+function TreeRoot({ bio, map, childrenMap }: { bio: Biography; map: Map<string, Biography>; childrenMap: Map<string, Biography[]> }) {
+  const sons = childrenMap.get(bio.id) ?? [];
   const brotherIds = bio.brotherIds ?? [];
-  const sons = sonIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
   const brothers = brotherIds.map((id) => map.get(id)).filter((b): b is Biography => b != null);
   const hasBrothers = brothers.length > 0;
 
@@ -78,7 +76,7 @@ function TreeRoot({ bio, map }: { bio: Biography; map: Map<string, Biography> })
                   <div className="tree-gen-connector-down" aria-hidden="true" />
                   <div className="tree-gen-children-row">
                     {sons.map((son) => (
-                      <TreePersonCell key={son.id} bio={son} map={map} />
+                      <TreePersonCell key={son.id} bio={son} map={map} childrenMap={childrenMap} />
                     ))}
                   </div>
                 </>
@@ -100,7 +98,7 @@ function TreeRoot({ bio, map }: { bio: Biography; map: Map<string, Biography> })
               <div className="tree-gen-connector-down" aria-hidden="true" />
               <div className="tree-gen-children-row">
                 {sons.map((son) => (
-                  <TreePersonCell key={son.id} bio={son} map={map} />
+                  <TreePersonCell key={son.id} bio={son} map={map} childrenMap={childrenMap} />
                 ))}
               </div>
             </>
@@ -129,12 +127,29 @@ export default function TreePage() {
 
   const map = new Map(biographies.map((b) => [b.id, b]));
 
+  // Children = union of parent.sonIds and everyone who has parent as fatherId (so tree is correct even if one side is missing)
+  const childrenMap = new Map<string, Biography[]>();
+  for (const bio of biographies) {
+    const fromSonIds = (bio.sonIds ?? []).map((id) => map.get(id)).filter((b): b is Biography => b != null);
+    const fromFatherId = biographies.filter((b) => (b.fatherId ?? '').trim() === bio.id);
+    const seen = new Set<string>();
+    const merged: Biography[] = [];
+    for (const b of [...fromSonIds, ...fromFatherId]) {
+      if (seen.has(b.id)) continue;
+      seen.add(b.id);
+      merged.push(b);
+    }
+    if (merged.length > 0) childrenMap.set(bio.id, merged);
+  }
+
   const hasRelation = (b: Biography) =>
     (b.fatherId && b.fatherId.trim()) ||
     (b.sonIds && b.sonIds.length > 0) ||
     (b.brotherIds && b.brotherIds.length > 0);
 
+  // Not a root if someone lists them as son, or if they have a father (so they appear only under the father)
   const isSonOfSomeone = (b: Biography) =>
+    (b.fatherId != null && b.fatherId.trim() !== '') ||
     biographies.some((other) => (other.sonIds ?? []).includes(b.id));
 
   let roots = biographies.filter((b) => hasRelation(b) && !isSonOfSomeone(b));
@@ -191,7 +206,7 @@ export default function TreePage() {
       </p>
       <div className="tree-gen-forest">
         {roots.map((bio) => (
-          <TreeRoot key={bio.id} bio={bio} map={map} />
+          <TreeRoot key={bio.id} bio={bio} map={map} childrenMap={childrenMap} />
         ))}
       </div>
     </div>
