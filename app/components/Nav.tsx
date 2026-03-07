@@ -35,7 +35,6 @@ export function Nav() {
   const isTree = pathname.startsWith('/tree');
   const isStats = pathname.startsWith('/stats');
   const isEvents = pathname.startsWith('/events');
-  const isAdd = pathname.startsWith('/add');
   const isUsers = pathname.startsWith('/admin/users');
   const isLogin = pathname.startsWith('/login');
 
@@ -66,11 +65,6 @@ export function Nav() {
           <NavLink href="/events" active={isEvents}>
             Événements
           </NavLink>
-          {(role === 'admin' || role === 'edit') && (
-            <NavLink href="/add" active={isAdd}>
-              Ajouter
-            </NavLink>
-          )}
           {role === 'admin' && (
             <NavLink href="/admin/users" active={isUsers}>
               Utilisateurs

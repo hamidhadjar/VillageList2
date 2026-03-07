@@ -5,11 +5,16 @@ import type { Event } from './event-types';
 const TABLE = 'events';
 
 function rowToEvent(row: Record<string, unknown>): Event {
+  const imageUrls = Array.isArray(row.image_urls)
+    ? (row.image_urls as string[]).filter((u): u is string => typeof u === 'string')
+    : (row.image_url as string) ? [row.image_url as string] : [];
   return {
     id: String(row.id ?? ''),
     date: (row.date as string)?.trim() || undefined,
     place: (row.place as string)?.trim() || undefined,
     description: (row.description as string) ?? '',
+    imageUrl: imageUrls[0],
+    imageUrls: imageUrls.length ? imageUrls : undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -59,10 +64,13 @@ export async function createEvent(
   if (supabase) {
     try {
       const now = new Date().toISOString();
+      const imageUrls = input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : []);
       const row = {
         date: input.date?.trim() || null,
         place: input.place?.trim() || null,
         description: input.description?.trim() ?? '',
+        image_url: imageUrls[0] ?? null,
+        image_urls: imageUrls.length ? imageUrls : null,
         created_at: now,
         updated_at: now,
       };
@@ -89,6 +97,13 @@ export async function updateEvent(
       if (input.date !== undefined) row.date = input.date?.trim() || null;
       if (input.place !== undefined) row.place = input.place?.trim() || null;
       if (input.description !== undefined) row.description = input.description?.trim() ?? '';
+      if (input.imageUrls !== undefined) {
+        row.image_urls = input.imageUrls?.length ? input.imageUrls : [];
+        row.image_url = input.imageUrls?.[0] ?? null;
+      } else if (input.imageUrl !== undefined) {
+        row.image_url = input.imageUrl ?? null;
+        row.image_urls = input.imageUrl ? [input.imageUrl] : [];
+      }
       const { data, error } = await supabase
         .from(TABLE)
         .update(row)

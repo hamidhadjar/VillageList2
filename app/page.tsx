@@ -154,28 +154,35 @@ export default function HomePage() {
             </p>
           )}
         </div>
-        {biographies.length > 0 && filtered.length > 0 && (
-          <div className="actions" style={{ marginTop: 0 }}>
-            <a
-              href={exportUrl('pdf')}
-              className="btn btn-ghost"
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Exporter tout (PDF)
-            </a>
-            <a
-              href={exportUrl('docx')}
-              className="btn btn-ghost"
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Exporter tout (Word)
-            </a>
-          </div>
-        )}
+        <div className="actions" style={{ marginTop: 0 }}>
+          {canEdit && (
+            <Link href="/add" className="btn btn-primary">
+              Ajouter une biographie
+            </Link>
+          )}
+          {biographies.length > 0 && filtered.length > 0 && (
+            <>
+              <a
+                href={exportUrl('pdf')}
+                className="btn btn-ghost"
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Exporter tout (PDF)
+              </a>
+              <a
+                href={exportUrl('docx')}
+                className="btn btn-ghost"
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Exporter tout (Word)
+              </a>
+            </>
+          )}
+        </div>
       </div>
 
       {biographies.length > 0 && (

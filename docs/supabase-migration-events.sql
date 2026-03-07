@@ -6,9 +6,15 @@ CREATE TABLE IF NOT EXISTS events (
   date TEXT,
   place TEXT,
   description TEXT NOT NULL DEFAULT '',
+  image_url TEXT,
+  image_urls JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- If you already have the events table without image columns, run:
+-- ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT;
+-- ALTER TABLE events ADD COLUMN IF NOT EXISTS image_urls JSONB;
 
 -- Optional: enable RLS and allow service role full access (app uses service role)
 -- ALTER TABLE events ENABLE ROW LEVEL SECURITY;

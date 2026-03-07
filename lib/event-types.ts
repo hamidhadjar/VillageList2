@@ -3,6 +3,8 @@ export interface Event {
   date?: string;
   place?: string;
   description: string;
+  imageUrl?: string;
+  imageUrls?: string[];
   createdAt: string;
   updatedAt: string;
 }

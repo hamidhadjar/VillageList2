@@ -23,10 +23,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as EventInput;
     const description = body.description?.trim() ?? '';
+    const imageUrls = Array.isArray(body.imageUrls)
+      ? body.imageUrls.filter((u): u is string => typeof u === 'string').map((u) => u.trim()).filter(Boolean)
+      : undefined;
     const event = await createEvent({
       date: body.date?.trim() || undefined,
       place: body.place?.trim() || undefined,
       description: description || 'Sans description',
+      imageUrls: imageUrls?.length ? imageUrls : undefined,
     });
     return NextResponse.json(event);
   } catch (e) {

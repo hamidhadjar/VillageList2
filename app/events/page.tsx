@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { normalizeImageUrl } from '@/lib/types';
 import type { Event } from '@/lib/event-types';
 import type { Role } from '@/lib/user-types';
 
@@ -18,8 +19,11 @@ export default function EventsPage() {
   const [filterDate, setFilterDate] = useState('');
   const [filterPlace, setFilterPlace] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ date: '', place: '', description: '' });
+  const [form, setForm] = useState({ date: '', place: '', description: '', imageUrls: [] as string[] });
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,11 +47,34 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
+  const uploadPendingFiles = async (): Promise<string[]> => {
+    const uploaded: string[] = [];
+    for (let i = 0; i < pendingFiles.length; i++) {
+      const file = pendingFiles[i];
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        cache: 'no-store',
+        headers: { 'X-Upload-Index': String(i) },
+      });
+      const data = await uploadRes.json().catch(() => ({}));
+      if (!uploadRes.ok) throw new Error((data as { error?: string }).error || 'Échec du téléchargement.');
+      const url = typeof (data as { url?: string }).url === 'string' ? (data as { url: string }).url.trim() : '';
+      if (!url) throw new Error('Réponse invalide après upload.');
+      uploaded.push(normalizeImageUrl(url));
+    }
+    return uploaded;
+  };
+
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSaving(true);
     try {
+      const newUrls = await uploadPendingFiles();
+      const allUrls = [...form.imageUrls, ...newUrls];
       const res = await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,6 +82,7 @@ export default function EventsPage() {
           date: form.date.trim() || undefined,
           place: form.place.trim() || undefined,
           description: form.description.trim() || 'Sans description',
+          imageUrls: allUrls.length ? allUrls : undefined,
         }),
       });
       const data = await res.json();
@@ -63,10 +91,14 @@ export default function EventsPage() {
         setSaving(false);
         return;
       }
-      setForm({ date: '', place: '', description: '' });
+      setForm({ date: '', place: '', description: '', imageUrls: [] });
+      setPendingFiles([]);
+      pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
+      setPendingPreviews([]);
+      setShowAddForm(false);
       setEvents((prev) => [data, ...prev]);
-    } catch {
-      setError('Une erreur s’est produite.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur s’est produite.');
     }
     setSaving(false);
   };
@@ -77,6 +109,8 @@ export default function EventsPage() {
     setError('');
     setSaving(true);
     try {
+      const newUrls = await uploadPendingFiles();
+      const allUrls = [...form.imageUrls, ...newUrls];
       const res = await fetch(`/api/events/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -84,6 +118,7 @@ export default function EventsPage() {
           date: form.date.trim() || undefined,
           place: form.place.trim() || undefined,
           description: form.description.trim() || '',
+          imageUrls: allUrls,
         }),
       });
       const data = await res.json();
@@ -94,27 +129,57 @@ export default function EventsPage() {
       }
       setEvents((prev) => prev.map((ev) => (ev.id === editingId ? data : ev)));
       setEditingId(null);
-      setForm({ date: '', place: '', description: '' });
-    } catch {
-      setError('Une erreur s’est produite.');
+      setForm({ date: '', place: '', description: '', imageUrls: [] });
+      setPendingFiles([]);
+      pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
+      setPendingPreviews([]);
+      setShowAddForm(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur s’est produite.');
     }
     setSaving(false);
   };
 
   const startEdit = (ev: Event) => {
+    setShowAddForm(false);
     setEditingId(ev.id);
     setForm({
       date: ev.date ?? '',
       place: ev.place ?? '',
       description: ev.description ?? '',
+      imageUrls: ev.imageUrls ?? [],
     });
+    setPendingFiles([]);
+    pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
+    setPendingPreviews([]);
     setError('');
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setForm({ date: '', place: '', description: '' });
+    setShowAddForm(false);
+    setForm({ date: '', place: '', description: '', imageUrls: [] });
+    setPendingFiles([]);
+    pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
+    setPendingPreviews([]);
     setError('');
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'));
+    setPendingFiles((prev) => [...prev, ...files]);
+    setPendingPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+    e.target.value = '';
+  };
+
+  const removeExistingImage = (index: number) => {
+    setForm((p) => ({ ...p, imageUrls: p.imageUrls.filter((_, i) => i !== index) }));
+  };
+
+  const removePendingImage = (index: number) => {
+    URL.revokeObjectURL(pendingPreviews[index]);
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+    setPendingPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const confirmDelete = async () => {
@@ -140,7 +205,30 @@ export default function EventsPage() {
   return (
     <div className="container">
       <div className="page-header page-header-with-actions">
-        <h1>Événements</h1>
+        <div>
+          <h1>Événements</h1>
+          {events.length > 0 && (
+            <p className="page-header-count">
+              <strong>{filteredEvents.length}</strong> événement{filteredEvents.length !== 1 ? 's' : ''} affiché{filteredEvents.length !== 1 ? 's' : ''}
+              {hasActiveFilters && ` sur ${events.length}`}
+            </p>
+          )}
+        </div>
+        {canEdit && (
+          <div className="actions" style={{ marginTop: 0 }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                cancelEdit();
+                setShowAddForm(true);
+              }}
+              style={{ display: showAddForm && !editingId ? 'none' : undefined }}
+            >
+              Ajouter un événement
+            </button>
+          </div>
+        )}
       </div>
 
       {events.length > 0 && (
@@ -188,7 +276,7 @@ export default function EventsPage() {
         </div>
       )}
 
-      {canEdit && (
+      {canEdit && (showAddForm || editingId) && (
         <div className="card" style={{ marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.15rem', marginBottom: '1rem' }}>
             {editingId ? 'Modifier l’événement' : 'Ajouter un événement'}
@@ -197,6 +285,48 @@ export default function EventsPage() {
             onSubmit={editingId ? handleSubmitEdit : handleSubmitAdd}
             style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
           >
+            <div className="form-group">
+              <label>Photos (plusieurs possibles)</label>
+              {(form.imageUrls.length > 0 || pendingPreviews.length > 0) && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  {form.imageUrls.map((url, i) => (
+                    <div key={`e-${i}`} style={{ position: 'relative', display: 'inline-block' }}>
+                      <img src={url} alt="" className="image-preview" style={{ maxHeight: '100px', display: 'block', borderRadius: 'var(--radius)' }} />
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.8rem', minWidth: 'auto', zIndex: 1 }}
+                        onClick={() => removeExistingImage(i)}
+                        aria-label="Retirer cette photo"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  ))}
+                  {pendingPreviews.map((src, i) => (
+                    <div key={`p-${i}`} style={{ position: 'relative', display: 'inline-block' }}>
+                      <img src={src} alt={`Nouvelle ${i + 1}`} className="image-preview" style={{ maxHeight: '100px', display: 'block', borderRadius: 'var(--radius)' }} />
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', padding: '0.25rem 0.5rem', fontSize: '0.8rem', minWidth: 'auto', zIndex: 1 }}
+                        onClick={() => removePendingImage(i)}
+                        aria-label="Retirer cette photo"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                multiple
+                onChange={handleImageChange}
+                style={{ marginTop: '0.5rem' }}
+              />
+            </div>
             <div className="form-grid-2">
               <div className="form-group">
                 <label htmlFor="event-date">Date</label>
@@ -232,7 +362,7 @@ export default function EventsPage() {
             </div>
             {error && <p style={{ color: 'var(--danger)', margin: 0 }}>{error}</p>}
             <div className="actions">
-              {editingId && (
+              {(editingId || showAddForm) && (
                 <button type="button" className="btn btn-ghost" onClick={cancelEdit}>
                   Annuler
                 </button>
@@ -248,9 +378,9 @@ export default function EventsPage() {
       {events.length === 0 ? (
         <div className="card">
           <p className="empty-state">Aucun événement pour le moment.</p>
-          {canEdit && (
+          {canEdit && !showAddForm && (
             <p className="meta" style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-              Utilisez le formulaire ci-dessus pour en ajouter.
+              Cliquez sur « Ajouter un événement » ci-dessus pour en ajouter.
             </p>
           )}
         </div>
@@ -270,10 +400,25 @@ export default function EventsPage() {
         </div>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {filteredEvents.map((ev) => (
+          {filteredEvents.map((ev) => {
+            const urls = ev.imageUrls?.length ? ev.imageUrls : (ev.imageUrl ? [ev.imageUrl] : []);
+            return (
             <li key={ev.id} className="card" style={{ marginBottom: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
+                  {urls.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      {urls.map((url, i) => (
+                        <img
+                          key={i}
+                          src={url}
+                          alt=""
+                          style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: 'var(--radius)' }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ))}
+                    </div>
+                  )}
                   {(ev.date || ev.place) && (
                     <p className="meta" style={{ marginBottom: '0.35rem' }}>
                       {ev.date && <span>{ev.date}</span>}
@@ -301,7 +446,8 @@ export default function EventsPage() {
                 )}
               </div>
             </li>
-          ))}
+          );
+          })}
         </ul>
       )}
 
