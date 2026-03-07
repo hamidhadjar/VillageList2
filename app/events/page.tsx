@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import type { Event } from '@/lib/event-types';
 import type { Role } from '@/lib/user-types';
@@ -16,11 +15,20 @@ export default function EventsPage() {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterDate, setFilterDate] = useState('');
+  const [filterPlace, setFilterPlace] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: '', place: '', description: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const filteredEvents = events.filter((ev) => {
+    const dateMatch = !filterDate.trim() || (ev.date ?? '').toLowerCase().includes(filterDate.trim().toLowerCase());
+    const placeMatch = !filterPlace.trim() || (ev.place ?? '').toLowerCase().includes(filterPlace.trim().toLowerCase());
+    return dateMatch && placeMatch;
+  });
+  const hasActiveFilters = filterDate.trim() !== '' || filterPlace.trim() !== '';
 
   const fetchEvents = async () => {
     const res = await fetch('/api/events');
@@ -135,6 +143,51 @@ export default function EventsPage() {
         <h1>Événements</h1>
       </div>
 
+      {events.length > 0 && (
+        <div className="card search-bar" style={{ marginBottom: '1rem' }}>
+          <label className="search-bar-label">Filtrer</label>
+          <div className="search-bar-fields">
+            <div className="form-group search-field">
+              <label htmlFor="filter-date">Date</label>
+              <input
+                id="filter-date"
+                type="text"
+                placeholder="ex. 1960, juin"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+              />
+            </div>
+            <div className="form-group search-field">
+              <label htmlFor="filter-place">Lieu</label>
+              <input
+                id="filter-place"
+                type="text"
+                placeholder="ex. Paris"
+                value={filterPlace}
+                onChange={(e) => setFilterPlace(e.target.value)}
+              />
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <span className="meta">
+                {filteredEvents.length} événement{filteredEvents.length !== 1 ? 's' : ''} affiché{filteredEvents.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setFilterDate('');
+                  setFilterPlace('');
+                }}
+              >
+                Effacer les filtres
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {canEdit && (
         <div className="card" style={{ marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.15rem', marginBottom: '1rem' }}>
@@ -201,9 +254,23 @@ export default function EventsPage() {
             </p>
           )}
         </div>
+      ) : filteredEvents.length === 0 ? (
+        <div className="card">
+          <p className="empty-state">Aucun événement ne correspond aux filtres.</p>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => {
+              setFilterDate('');
+              setFilterPlace('');
+            }}
+          >
+            Effacer les filtres
+          </button>
+        </div>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {events.map((ev) => (
+          {filteredEvents.map((ev) => (
             <li key={ev.id} className="card" style={{ marginBottom: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
