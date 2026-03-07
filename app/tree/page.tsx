@@ -137,20 +137,22 @@ export default function TreePage() {
     if (id) map.set(id, b);
   }
 
-  // Children = union of parent.sonIds and everyone who has parent as fatherId
+  // Children = union of parent.sonIds and everyone who has parent as fatherId (prefer both so no son is missed)
   const childrenMap = new Map<string, Biography[]>();
+  const safeSonIds = (b: Biography): string[] =>
+    Array.isArray(b.sonIds) ? b.sonIds.map((id) => toId(id)).filter(Boolean) : [];
   for (const bio of biographies) {
     const parentId = toId(bio.id);
     if (!parentId) continue;
-    const fromSonIds = (bio.sonIds ?? [])
-      .map((id) => map.get(toId(id)))
+    const fromSonIds = safeSonIds(bio)
+      .map((id) => map.get(id))
       .filter((b): b is Biography => b != null);
     const fromFatherId = biographies.filter((b) => toId(b.fatherId) === parentId);
     const seen = new Set<string>();
     const merged: Biography[] = [];
-    for (const b of [...fromSonIds, ...fromFatherId]) {
-      const bid = toId(b.id) || b.id;
-      if (seen.has(bid)) continue;
+    for (const b of [...fromFatherId, ...fromSonIds]) {
+      const bid = toId(b.id) || String(b.id);
+      if (!bid || seen.has(bid)) continue;
       seen.add(bid);
       merged.push(b);
     }
@@ -222,7 +224,25 @@ export default function TreePage() {
     <div className="container">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <h1>Arbre généalogique</h1>
-        <Link href="/" className="btn btn-ghost">Retour à la liste</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <a
+            href="/api/tree/export?format=pdf"
+            className="btn btn-ghost"
+            download
+            rel="noopener noreferrer"
+          >
+            Export PDF
+          </a>
+          <a
+            href="/api/tree/export?format=docx"
+            className="btn btn-ghost"
+            download
+            rel="noopener noreferrer"
+          >
+            Export Word
+          </a>
+          <Link href="/" className="btn btn-ghost">Retour à la liste</Link>
+        </div>
       </div>
       <p className="meta" style={{ marginBottom: '1.5rem' }}>
         Les fils sont reliés au père sous lui ; les frères apparaissent sur la même ligne (même niveau).

@@ -9,10 +9,14 @@ function rowToBio(row: Record<string, unknown>): Biography {
     ? (row.image_urls as string[])
     : (row.image_url ? [row.image_url as string] : []);
   const imageUrl = imageUrls[0];
-  const sonIds = Array.isArray(row.son_ids) ? (row.son_ids as string[]).filter((id): id is string => typeof id === 'string') : undefined;
-  const brotherIds = Array.isArray(row.brother_ids) ? (row.brother_ids as string[]).filter((id): id is string => typeof id === 'string') : undefined;
+  // Normalize IDs to string (Supabase may return bigint as number)
+  const toStr = (x: unknown): string => (x == null ? '' : String(x).trim());
+  const sonIdsRaw = Array.isArray(row.son_ids) ? row.son_ids : [];
+  const sonIds = sonIdsRaw.map(toStr).filter(Boolean);
+  const brotherIdsRaw = Array.isArray(row.brother_ids) ? row.brother_ids : [];
+  const brotherIds = brotherIdsRaw.map(toStr).filter(Boolean);
   return {
-    id: row.id as string,
+    id: toStr(row.id) || String(row.id ?? ''),
     name: row.name as string,
     title: (row.title as string) ?? undefined,
     birthDate: (row.birth_date as string) ?? undefined,
@@ -21,9 +25,9 @@ function rowToBio(row: Record<string, unknown>): Biography {
     fullBio: row.full_bio as string,
     imageUrl,
     imageUrls: imageUrls.length ? imageUrls : undefined,
-    fatherId: (row.father_id as string) ?? undefined,
-    sonIds: sonIds?.length ? sonIds : undefined,
-    brotherIds: brotherIds?.length ? brotherIds : undefined,
+    fatherId: toStr(row.father_id) || undefined,
+    sonIds: sonIds.length ? sonIds : undefined,
+    brotherIds: brotherIds.length ? brotherIds : undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     lastEditedAt: (row.last_edited_at as string) ?? undefined,
