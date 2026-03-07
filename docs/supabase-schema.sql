@@ -10,6 +10,7 @@ create table if not exists public.biographies (
   summary text not null,
   full_bio text not null,
   image_url text,
+  image_urls text[],
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   last_edited_at timestamptz,

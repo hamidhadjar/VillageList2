@@ -21,6 +21,7 @@ export default function AdminUsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ email: '', role: 'viewer' as Role, password: '' });
   const [forbidden, setForbidden] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const fetchUsers = async () => {
     const res = await fetch('/api/users');
@@ -42,6 +43,7 @@ export default function AdminUsersPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setCreating(true);
     try {
       const res = await fetch('/api/users', {
         method: 'POST',
@@ -54,17 +56,21 @@ export default function AdminUsersPage() {
         data = await res.json();
       } catch {
         setError(res.ok ? 'Réponse invalide.' : `Erreur ${res.status}. Réessayez.`);
+        setCreating(false);
         return;
       }
       if (!res.ok) {
         setError(data.error || 'Erreur');
+        setCreating(false);
         return;
       }
       setShowForm(false);
       setForm({ email: '', password: '', role: 'viewer' });
-      fetchUsers();
+      await fetchUsers();
     } catch (err) {
       setError('Erreur réseau ou serveur. Réessayez.');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -187,8 +193,8 @@ export default function AdminUsersPage() {
             <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>
               Annuler
             </button>
-            <button type="submit" className="btn btn-primary">
-              Créer
+            <button type="submit" className="btn btn-primary" disabled={creating}>
+              {creating ? 'Création…' : 'Créer'}
             </button>
           </div>
         </form>

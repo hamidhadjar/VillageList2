@@ -14,7 +14,11 @@ export async function GET(request: NextRequest) {
     const users = await getAllUsers();
     return NextResponse.json(users);
   } catch (e) {
-    return NextResponse.json({ error: 'Erreur' }, { status: 500 });
+    console.error('GET /api/users error:', e);
+    const message =
+      e instanceof Error ? e.message : typeof (e as { message?: string })?.message === 'string' ? (e as { message: string }).message : '';
+    const safeMessage = message && message.length < 200 ? message : 'Erreur';
+    return NextResponse.json({ error: safeMessage }, { status: 500 });
   }
 }
 
@@ -49,13 +53,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(user);
   } catch (e) {
     console.error('POST /api/users error:', e);
-    const message = e instanceof Error ? e.message : '';
+    const message =
+      e instanceof Error
+        ? e.message
+        : typeof (e as { message?: string })?.message === 'string'
+          ? (e as { message: string }).message
+          : '';
     if (message.includes('read-only') || message.includes('EROFS') || message.includes('EACCES') || message.includes('EPERM')) {
       return NextResponse.json(
-        { error: 'La gestion des utilisateurs est en lecture seule sur ce déploiement (ex. Netlify).' },
+        {
+          error:
+            'Impossible d’ajouter un utilisateur sur ce déploiement. Configurez Supabase (SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY) dans les variables d’environnement (ex. Vercel).',
+        },
         { status: 503 }
       );
     }
-    return NextResponse.json({ error: 'Erreur lors de la création.' }, { status: 500 });
+    // Surface Supabase/DB errors (e.g. "relation \"app_users\" does not exist") so user can fix setup
+    const safeMessage = message && message.length < 200 ? message : '';
+    return NextResponse.json(
+      { error: safeMessage || 'Erreur lors de la création.' },
+      { status: 500 }
+    );
   }
 }
