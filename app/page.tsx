@@ -128,18 +128,53 @@ export default function HomePage() {
 
   const hasFilters = !!(searchName.trim() || searchBirthDate.trim() || searchDeathDate.trim());
 
+  const exportUrl = (format: 'pdf' | 'docx') => {
+    const params = new URLSearchParams({
+      format,
+      sort: sortBy,
+      name: searchName.trim(),
+      birthDate: searchBirthDate.trim(),
+      deathDate: searchDeathDate.trim(),
+    });
+    return `/api/biographies/export?${params.toString()}`;
+  };
+
   return (
     <div className="container">
-      <div className="page-header">
-        <h1>Biographies</h1>
-        {biographies.length > 0 && (
-          <p className="page-header-count">
-            {hasFilters ? (
-              <>Affichage de <strong>{filtered.length}</strong> sur <strong>{biographies.length}</strong> biographie(s)</>
-            ) : (
-              <><strong>{biographies.length}</strong> biographie(s) au total</>
-            )}
-          </p>
+      <div className="page-header" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem', justifyContent: 'space-between' }}>
+        <div>
+          <h1>Biographies</h1>
+          {biographies.length > 0 && (
+            <p className="page-header-count">
+              {hasFilters ? (
+                <>Affichage de <strong>{filtered.length}</strong> sur <strong>{biographies.length}</strong> biographie(s)</>
+              ) : (
+                <><strong>{biographies.length}</strong> biographie(s) au total</>
+              )}
+            </p>
+          )}
+        </div>
+        {biographies.length > 0 && filtered.length > 0 && (
+          <div className="actions" style={{ marginTop: 0 }}>
+            <a
+              href={exportUrl('pdf')}
+              className="btn btn-ghost"
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Exporter tout (PDF)
+            </a>
+            <a
+              href={exportUrl('docx')}
+              className="btn btn-ghost"
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Exporter tout (Word)
+            </a>
+          </div>
         )}
       </div>
 
