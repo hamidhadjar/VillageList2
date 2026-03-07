@@ -133,8 +133,8 @@ export default function EditPage() {
           fullBio: form.fullBio.trim(),
           imageUrls: finalImageUrls,
           fatherId: fatherId.trim() || undefined,
-          sonIds: sonIds.length ? sonIds : undefined,
-          brotherIds: brotherIds.length ? brotherIds : undefined,
+          sonIds,
+          brotherIds,
         }),
       });
       const data = await res.json();

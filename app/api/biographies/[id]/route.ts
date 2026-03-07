@@ -61,11 +61,19 @@ export async function PUT(
       : body.imageUrl !== undefined
         ? (body.imageUrl?.trim() ? [normalizeImageUrl(body.imageUrl.trim())] : [])
         : undefined;
-  const sonIdsArr = body.sonIds !== undefined && Array.isArray(body.sonIds) ? body.sonIds.filter((id): id is string => typeof id === 'string') : undefined;
-  const brotherIdsArr = body.brotherIds !== undefined && Array.isArray(body.brotherIds) ? body.brotherIds.filter((id): id is string => typeof id === 'string') : undefined;
+  const sonIdsArr =
+    body.sonIds !== undefined && Array.isArray(body.sonIds)
+      ? body.sonIds.map((id) => (id != null ? String(id).trim() : '')).filter(Boolean)
+      : undefined;
+  const brotherIdsArr =
+    body.brotherIds !== undefined && Array.isArray(body.brotherIds)
+      ? body.brotherIds.map((id) => (id != null ? String(id).trim() : '')).filter(Boolean)
+      : undefined;
+  const toId = (x: string | number | undefined | null): string => (x == null ? '' : String(x).trim());
   try {
-    const existing = fatherSent ? await getBiographyById(id) : null;
-    const oldFatherId = existing?.fatherId?.trim();
+    const needExisting = fatherSent || sonIdsArr !== undefined;
+    const existing = needExisting ? await getBiographyById(id) : null;
+    const oldFatherId = existing?.fatherId != null ? toId(existing.fatherId) : undefined;
 
     const updated = await updateBiography(id, {
       name: body.name,
@@ -76,7 +84,7 @@ export async function PUT(
       title: body.title,
       imageUrl: urls !== undefined ? urls[0] : body.imageUrl,
       imageUrls: urls,
-      fatherId: newFatherId,
+      fatherId: fatherSent ? (newFatherId ?? '') : undefined,
       sonIds: sonIdsArr,
       brotherIds: brotherIdsArr,
       lastEditedAt: now,
@@ -85,22 +93,35 @@ export async function PUT(
     if (!updated) {
       return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
     }
-    // Auto link father → son: keep father's son_ids in sync with fatherId on this bio
-    if (oldFatherId !== newFatherId) {
+    const myIdNorm = toId(id);
+    // Auto sync father ↔ son: when this bio's fatherId changes, update old/new father's son_ids
+    if (oldFatherId !== (newFatherId ?? '')) {
       if (oldFatherId) {
         const oldFather = await getBiographyById(oldFatherId);
         if (oldFather) {
-          const prevSons = (oldFather.sonIds ?? []).filter((sid) => sid !== id);
+          const prevSons = (oldFather.sonIds ?? []).map(toId).filter((sid) => sid !== myIdNorm);
           await updateBiography(oldFatherId, { sonIds: prevSons.length ? prevSons : [] });
         }
       }
       if (newFatherId) {
         const newFather = await getBiographyById(newFatherId);
         if (newFather) {
-          const existingSons = newFather.sonIds ?? [];
-          if (!existingSons.includes(id)) {
-            await updateBiography(newFatherId, { sonIds: [...existingSons, id] });
+          const existingSons = (newFather.sonIds ?? []).map(toId);
+          if (!existingSons.includes(myIdNorm)) {
+            await updateBiography(newFatherId, { sonIds: [...(newFather.sonIds ?? []), id] });
           }
+        }
+      }
+    }
+    // When this bio's sonIds is updated, clear fatherId on any son that was removed from the list
+    if (sonIdsArr !== undefined && existing) {
+      const prevSonIds = (existing.sonIds ?? []).map(toId);
+      const newSonIdsSet = new Set((sonIdsArr ?? []).map(toId));
+      const removedSonIds = prevSonIds.filter((sid) => sid && !newSonIdsSet.has(sid));
+      for (const sonId of removedSonIds) {
+        const son = await getBiographyById(sonId);
+        if (son && toId(son.fatherId) === myIdNorm) {
+          await updateBiography(sonId, { fatherId: '' });
         }
       }
     }
