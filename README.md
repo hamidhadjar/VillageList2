@@ -6,7 +6,10 @@ A Next.js app to manage people biographies: add, edit, and remove entries. Uses 
 
 1. **Create a Supabase project** at [supabase.com](https://supabase.com) (free tier is enough).
 
-2. **Database**: In Supabase → **SQL Editor**, run the script in `docs/supabase-schema.sql` to create the `biographies` table.
+2. **Database**: In Supabase → **SQL Editor**, run:
+   - `docs/supabase-schema.sql` to create the `biographies` table
+   - `docs/supabase-migration-events.sql` to create the `events` table (for the Événements page)
+   - `docs/supabase-app-users.sql` if you use Supabase for login (app users)
 
 3. **Storage**: In Supabase → **Storage** → **New bucket**:
    - Name: `biography-images`
@@ -75,6 +78,21 @@ Deploy to Vercel, Railway, Netlify, or any Node host. Add the same env vars in t
    After the first deploy, set `NEXTAUTH_URL` to the real URL if Netlify assigned a random one, then trigger a new deploy. **Users** are stored in `data/users.json`; on Netlify this is **not persistent**. For production you may need to store users in Supabase. **Biographies** and images persist when Supabase env vars are set.
 
    **If you see a server error on Netlify:** ensure `NEXTAUTH_SECRET` and `NEXTAUTH_URL` are set in Site settings → Environment variables. The app avoids writing to disk in serverless (read-only); login and listing work using committed `data/` files or Supabase.
+
+### « Enregistrement en lecture seule. Configurez Supabase. »
+
+This message appears when you add or edit **biographies** or **events** on a host where the filesystem is read-only (e.g. Vercel, Netlify). To fix it:
+
+1. **Create a Supabase project** at [supabase.com](https://supabase.com) (free tier).
+2. **Environment variables** (locally in `.env` or `.env.local`, and in your host’s dashboard):
+   - `SUPABASE_URL` — Supabase → **Project Settings** → **API** → Project URL
+   - `SUPABASE_SERVICE_ROLE_KEY` — same page, **service_role** key (click Reveal), **not** the anon key
+3. **Create the tables** in Supabase → **SQL Editor**:
+   - Run `docs/supabase-schema.sql` (biographies)
+   - Run `docs/supabase-migration-events.sql` (events)
+4. **Redeploy** (or restart `npm run dev` locally) so the app picks up the new env vars.
+
+After that, writes go to Supabase instead of the filesystem and the message disappears.
 
 ## Stack
 

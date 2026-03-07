@@ -214,8 +214,8 @@ export default function EventsPage() {
             </p>
           )}
         </div>
-        {canEdit && (
-          <div className="actions" style={{ marginTop: 0 }}>
+        <div className="actions" style={{ marginTop: 0 }}>
+          {canEdit && (
             <button
               type="button"
               className="btn btn-primary"
@@ -227,8 +227,30 @@ export default function EventsPage() {
             >
               Ajouter un événement
             </button>
-          </div>
-        )}
+          )}
+          {events.length > 0 && filteredEvents.length > 0 && (
+            <>
+              <a
+                href={`/api/events/export?format=pdf&date=${encodeURIComponent(filterDate)}&place=${encodeURIComponent(filterPlace)}`}
+                className="btn btn-ghost"
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Exporter tout (PDF)
+              </a>
+              <a
+                href={`/api/events/export?format=docx&date=${encodeURIComponent(filterDate)}&place=${encodeURIComponent(filterPlace)}`}
+                className="btn btn-ghost"
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Exporter tout (Word)
+              </a>
+            </>
+          )}
+        </div>
       </div>
 
       {events.length > 0 && (
