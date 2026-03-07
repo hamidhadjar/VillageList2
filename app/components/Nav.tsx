@@ -24,6 +24,7 @@ export function Nav() {
           <span className="nav-title">Gestion des biographies</span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <Link href="/stats">Statistiques</Link>
           {(role === 'admin' || role === 'edit') && (
             <Link href="/add">Ajouter une biographie</Link>
           )}
