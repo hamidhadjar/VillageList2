@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 
 const SAVED_EMAIL_KEY = 'loginEmail';
 
@@ -11,7 +10,6 @@ type LoginFormProps = {
 };
 
 export default function LoginForm({ callbackUrl = '/' }: LoginFormProps) {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -47,8 +45,9 @@ export default function LoginForm({ callbackUrl = '/' }: LoginFormProps) {
     } catch {
       // ignore
     }
-    router.push(callbackUrl);
-    router.refresh();
+    // Full navigation so the session is applied and the biography page loads correctly
+    const target = (callbackUrl && callbackUrl !== '/login' && callbackUrl.startsWith('/')) ? callbackUrl : '/';
+    window.location.href = target;
   };
 
   if (!savedEmailLoaded) {

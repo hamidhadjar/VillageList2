@@ -74,9 +74,7 @@ export async function createUser(input: UserInput): Promise<Omit<User, 'password
   const supabase = getSupabase();
   if (supabase) {
     const now = new Date().toISOString();
-    const id = crypto.randomUUID();
     const row = {
-      id,
       email: input.email.trim().toLowerCase(),
       password_hash: input.passwordHash,
       role: input.role,
@@ -85,7 +83,9 @@ export async function createUser(input: UserInput): Promise<Omit<User, 'password
     };
     const { data, error } = await supabase.from(TABLE).insert(row).select('id, email, role, created_at, updated_at').single();
     if (error) throw error;
-    const { passwordHash: __, ...user } = rowToUser({ ...data, password_hash: '' });
+    // id may be uuid (string) or bigint (number) depending on DB schema
+    const idStr = data?.id != null ? String(data.id) : '';
+    const { passwordHash: __, ...user } = rowToUser({ ...data, id: idStr, password_hash: '' });
     return user;
   }
   return Promise.resolve(usersStore.createUser(input));
