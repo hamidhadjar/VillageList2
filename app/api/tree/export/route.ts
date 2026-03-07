@@ -414,7 +414,7 @@ export async function GET(request: NextRequest) {
       allBiosInTree.add(b);
     }
   }
-  for (const bio of allBiosInTree) {
+  for (const bio of Array.from(allBiosInTree)) {
     const img = await fetchFirstImage(bio, origin);
     imageMap.set(toId(bio.id), img);
   }
