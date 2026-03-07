@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
-import { Biography, getImageUrls } from '@/lib/types';
+import { Biography, getImageUrls, type BiographyRelation } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
 
 const CAN_EDIT: Role[] = ['edit', 'admin'];
@@ -33,7 +33,7 @@ export default function ViewBioPage() {
 
   const params = useParams();
   const id = params.id as string;
-  const [bio, setBio] = useState<Biography | null>(null);
+  const [bio, setBio] = useState<(Biography & { relations?: { father?: BiographyRelation; sons: BiographyRelation[]; brothers: BiographyRelation[] } }) | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -146,6 +146,35 @@ export default function ViewBioPage() {
             {bio.birthDate && bio.deathDate && ' — '}
             {bio.deathDate && <span>{bio.deathDate}</span>}
           </p>
+        )}
+        {bio.relations && (bio.relations.father || bio.relations.sons?.length || bio.relations.brothers?.length) && (
+          <div className="bio-view-relations" style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+            {bio.relations.father && (
+              <p className="meta">
+                Père : <Link href={`/bio/${bio.relations.father.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{bio.relations.father.name}</Link>
+              </p>
+            )}
+            {bio.relations.sons && bio.relations.sons.length > 0 && (
+              <p className="meta">
+                Fils : {bio.relations.sons.map((s, i) => (
+                  <span key={s.id}>
+                    {i > 0 && ', '}
+                    <Link href={`/bio/${s.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{s.name}</Link>
+                  </span>
+                ))}
+              </p>
+            )}
+            {bio.relations.brothers && bio.relations.brothers.length > 0 && (
+              <p className="meta">
+                Frères : {bio.relations.brothers.map((b, i) => (
+                  <span key={b.id}>
+                    {i > 0 && ', '}
+                    <Link href={`/bio/${b.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{b.name}</Link>
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
         )}
         {showLastEdited && (bio.lastEditedAt || bio.lastEditedBy) && (
           <p className="meta bio-view-last-edited">

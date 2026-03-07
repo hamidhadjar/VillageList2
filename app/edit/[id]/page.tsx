@@ -10,6 +10,7 @@ export default function EditPage() {
   const params = useParams();
   const id = params.id as string;
   const [bio, setBio] = useState<Biography | null>(null);
+  const [allBiographies, setAllBiographies] = useState<Biography[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -21,6 +22,9 @@ export default function EditPage() {
     summary: '',
     fullBio: '',
   });
+  const [fatherId, setFatherId] = useState('');
+  const [sonIds, setSonIds] = useState<string[]>([]);
+  const [brotherIds, setBrotherIds] = useState<string[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
@@ -28,13 +32,16 @@ export default function EditPage() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const res = await fetch(`/api/biographies/${id}`);
-      if (!res.ok) {
+      const [bioRes, listRes] = await Promise.all([
+        fetch(`/api/biographies/${id}`),
+        fetch('/api/biographies'),
+      ]);
+      if (!bioRes.ok) {
         setBio(null);
         setLoading(false);
         return;
       }
-      const data = await res.json();
+      const data = await bioRes.json();
       if (!cancelled) {
         setBio(data);
         setImageUrls(getImageUrls(data));
@@ -46,6 +53,13 @@ export default function EditPage() {
           summary: data.summary ?? '',
           fullBio: data.fullBio ?? '',
         });
+        setFatherId(data.fatherId ?? '');
+        setSonIds(Array.isArray(data.sonIds) ? data.sonIds : []);
+        setBrotherIds(Array.isArray(data.brotherIds) ? data.brotherIds : []);
+      }
+      if (listRes.ok && !cancelled) {
+        const list = await listRes.json();
+        setAllBiographies(list);
       }
       setLoading(false);
     }
@@ -117,6 +131,9 @@ export default function EditPage() {
           summary: form.summary.trim(),
           fullBio: form.fullBio.trim(),
           imageUrls: finalImageUrls,
+          fatherId: fatherId.trim() || undefined,
+          sonIds: sonIds.length ? sonIds : undefined,
+          brotherIds: brotherIds.length ? brotherIds : undefined,
         }),
       });
       const data = await res.json();
@@ -260,6 +277,60 @@ export default function EditPage() {
               placeholder="ex. 1995"
             />
           </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="fatherId">Père</label>
+          <select
+            id="fatherId"
+            value={fatherId}
+            onChange={(e) => setFatherId(e.target.value)}
+            className="sort-select"
+          >
+            <option value="">— Aucun —</option>
+            {allBiographies.filter((b) => b.id !== id).map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="sonIds">Fils (plusieurs possibles)</label>
+          <p className="meta" style={{ marginTop: '0.25rem' }}>Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs.</p>
+          <select
+            id="sonIds"
+            multiple
+            size={4}
+            value={sonIds}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions, (o) => o.value);
+              setSonIds(selected);
+            }}
+            className="sort-select"
+            style={{ width: '100%' }}
+          >
+            {allBiographies.filter((b) => b.id !== id).map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="brotherIds">Frères (plusieurs possibles)</label>
+          <p className="meta" style={{ marginTop: '0.25rem' }}>Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs.</p>
+          <select
+            id="brotherIds"
+            multiple
+            size={4}
+            value={brotherIds}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions, (o) => o.value);
+              setBrotherIds(selected);
+            }}
+            className="sort-select"
+            style={{ width: '100%' }}
+          >
+            {allBiographies.filter((b) => b.id !== id).map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
         </div>
         <div className="form-group">
           <label htmlFor="summary">Résumé *</label>

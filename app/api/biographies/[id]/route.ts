@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getBiographyById, updateBiography, deleteBiography } from '@/lib/db';
-import { Biography, getImageUrls, normalizeImageUrl } from '@/lib/types';
+import { Biography, getImageUrls, normalizeImageUrl, type BiographyRelation } from '@/lib/types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 const EDIT_ROLES = ['edit', 'admin'];
@@ -17,7 +17,22 @@ export async function GET(
       return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
     }
     const urls = getImageUrls(biography);
-    return NextResponse.json({ ...biography, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] });
+    const out: Record<string, unknown> = { ...biography, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] };
+    const relations: { father?: BiographyRelation; sons: BiographyRelation[]; brothers: BiographyRelation[] } = { sons: [], brothers: [] };
+    if (biography.fatherId) {
+      const father = await getBiographyById(biography.fatherId);
+      if (father) relations.father = { id: father.id, name: father.name };
+    }
+    for (const sid of biography.sonIds ?? []) {
+      const son = await getBiographyById(sid);
+      if (son) relations.sons.push({ id: son.id, name: son.name });
+    }
+    for (const bid of biography.brotherIds ?? []) {
+      const bro = await getBiographyById(bid);
+      if (bro) relations.brothers.push({ id: bro.id, name: bro.name });
+    }
+    out.relations = relations;
+    return NextResponse.json(out);
   } catch (e) {
     return NextResponse.json({ error: 'Impossible de charger la biographie' }, { status: 500 });
   }
@@ -44,6 +59,8 @@ export async function PUT(
       : body.imageUrl !== undefined
         ? (body.imageUrl?.trim() ? [normalizeImageUrl(body.imageUrl.trim())] : [])
         : undefined;
+  const sonIdsArr = body.sonIds !== undefined && Array.isArray(body.sonIds) ? body.sonIds.filter((id): id is string => typeof id === 'string') : undefined;
+  const brotherIdsArr = body.brotherIds !== undefined && Array.isArray(body.brotherIds) ? body.brotherIds.filter((id): id is string => typeof id === 'string') : undefined;
   const updated = await updateBiography(id, {
     name: body.name,
     summary: body.summary,
@@ -53,6 +70,9 @@ export async function PUT(
     title: body.title,
     imageUrl: urls !== undefined ? urls[0] : body.imageUrl,
     imageUrls: urls,
+    fatherId: body.fatherId !== undefined ? (body.fatherId?.trim() || undefined) : undefined,
+    sonIds: sonIdsArr,
+    brotherIds: brotherIdsArr,
     lastEditedAt: now,
     lastEditedBy: editorEmail,
   });

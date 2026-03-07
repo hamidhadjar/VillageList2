@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { normalizeImageUrl } from '@/lib/types';
+import type { Biography } from '@/lib/types';
 
 export default function AddPage() {
   const router = useRouter();
+  const [allBiographies, setAllBiographies] = useState<Biography[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -17,8 +19,18 @@ export default function AddPage() {
     summary: '',
     fullBio: '',
   });
+  const [fatherId, setFatherId] = useState('');
+  const [sonIds, setSonIds] = useState<string[]>([]);
+  const [brotherIds, setBrotherIds] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/api/biographies')
+      .then((res) => res.ok ? res.json() : [])
+      .then(setAllBiographies)
+      .catch(() => {});
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -86,6 +98,9 @@ export default function AddPage() {
           summary: form.summary.trim(),
           fullBio: form.fullBio.trim(),
           imageUrls: imageUrls.length ? imageUrls : undefined,
+          fatherId: fatherId.trim() || undefined,
+          sonIds: sonIds.length ? sonIds : undefined,
+          brotherIds: brotherIds.length ? brotherIds : undefined,
         }),
       });
       const data = await res.json();
@@ -187,6 +202,54 @@ export default function AddPage() {
               placeholder="ex. 1995"
             />
           </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="fatherId">Père</label>
+          <select
+            id="fatherId"
+            value={fatherId}
+            onChange={(e) => setFatherId(e.target.value)}
+            className="sort-select"
+          >
+            <option value="">— Aucun —</option>
+            {allBiographies.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="sonIds">Fils (plusieurs possibles)</label>
+          <p className="meta" style={{ marginTop: '0.25rem' }}>Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs.</p>
+          <select
+            id="sonIds"
+            multiple
+            size={4}
+            value={sonIds}
+            onChange={(e) => setSonIds(Array.from(e.target.selectedOptions, (o) => o.value))}
+            className="sort-select"
+            style={{ width: '100%' }}
+          >
+            {allBiographies.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="brotherIds">Frères (plusieurs possibles)</label>
+          <p className="meta" style={{ marginTop: '0.25rem' }}>Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs.</p>
+          <select
+            id="brotherIds"
+            multiple
+            size={4}
+            value={brotherIds}
+            onChange={(e) => setBrotherIds(Array.from(e.target.selectedOptions, (o) => o.value))}
+            className="sort-select"
+            style={{ width: '100%' }}
+          >
+            {allBiographies.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
         </div>
         <div className="form-group">
           <label htmlFor="summary">Résumé *</label>

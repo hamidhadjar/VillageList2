@@ -9,10 +9,22 @@ export interface Biography {
   imageUrl?: string;
   /** Multiple image URLs. Use getImageUrls() to read (handles legacy imageUrl). */
   imageUrls?: string[];
+  /** ID of the father's biography. */
+  fatherId?: string;
+  /** IDs of sons' biographies. */
+  sonIds?: string[];
+  /** IDs of brothers' biographies. */
+  brotherIds?: string[];
   createdAt: string;
   updatedAt: string;
   lastEditedAt?: string;
   lastEditedBy?: string;
+}
+
+/** Resolved relation for display (id + name). */
+export interface BiographyRelation {
+  id: string;
+  name: string;
 }
 
 export type BiographyInput = Omit<Biography, 'id' | 'createdAt' | 'updatedAt'>;

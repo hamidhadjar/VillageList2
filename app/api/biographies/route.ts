@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = (await request.json()) as BiographyInput;
-    const { name, summary, fullBio, birthDate, deathDate, title, imageUrl, imageUrls } = body;
+    const { name, summary, fullBio, birthDate, deathDate, title, imageUrl, imageUrls, fatherId, sonIds, brotherIds } = body;
     if (!name?.trim() || !summary?.trim() || !fullBio?.trim()) {
       return NextResponse.json(
         { error: 'Le nom, le résumé et la biographie complète sont obligatoires.' },
@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
     const urls = Array.isArray(imageUrls)
       ? imageUrls.filter((u): u is string => typeof u === 'string').map((u) => normalizeImageUrl(u.trim())).filter((u) => u.length > 0)
       : (imageUrl?.trim() ? [normalizeImageUrl(imageUrl.trim())] : []);
+    const sonIdsArr = Array.isArray(sonIds) ? sonIds.filter((id): id is string => typeof id === 'string') : undefined;
+    const brotherIdsArr = Array.isArray(brotherIds) ? brotherIds.filter((id): id is string => typeof id === 'string') : undefined;
     const biography = await createBiography({
       name: name.trim(),
       summary: summary.trim(),
@@ -45,6 +47,9 @@ export async function POST(request: NextRequest) {
       title: title?.trim() || undefined,
       imageUrl: urls[0],
       imageUrls: urls.length ? [...urls] : undefined,
+      fatherId: fatherId?.trim() || undefined,
+      sonIds: sonIdsArr?.length ? sonIdsArr : undefined,
+      brotherIds: brotherIdsArr?.length ? brotherIdsArr : undefined,
     });
     const outUrls = getImageUrls(biography);
     return NextResponse.json({ ...biography, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });
