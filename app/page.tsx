@@ -7,7 +7,7 @@ import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { Biography, getImageUrls } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
 
-type SortOption = 'name-asc' | 'name-desc' | 'death-asc' | 'death-desc';
+type SortOption = 'name-asc' | 'name-desc' | 'death-asc' | 'death-desc' | 'updated-desc' | 'updated-asc';
 type ViewMode = 'list' | 'gallery';
 
 function parseDeathDate(dateStr: string | undefined): string {
@@ -54,7 +54,7 @@ export default function HomePage() {
   const [searchBirthDate, setSearchBirthDate] = useState('');
   const [searchDeathDate, setSearchDeathDate] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name-asc');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('gallery');
 
   const filtered = biographies.filter((bio) => {
     const nameMatch = !searchName.trim() || bio.name.toLowerCase().includes(searchName.trim().toLowerCase());
@@ -65,10 +65,13 @@ export default function HomePage() {
 
   const sorted = useMemo(() => {
     const list = [...filtered];
+    const updatedAt = (bio: Biography) => bio.lastEditedAt || bio.updatedAt || '';
     if (sortBy === 'name-asc') list.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
     else if (sortBy === 'name-desc') list.sort((a, b) => b.name.localeCompare(a.name, 'fr'));
     else if (sortBy === 'death-asc') list.sort((a, b) => parseDeathDate(a.deathDate).localeCompare(parseDeathDate(b.deathDate)));
     else if (sortBy === 'death-desc') list.sort((a, b) => parseDeathDate(b.deathDate).localeCompare(parseDeathDate(a.deathDate)));
+    else if (sortBy === 'updated-desc') list.sort((a, b) => updatedAt(b).localeCompare(updatedAt(a)));
+    else if (sortBy === 'updated-asc') list.sort((a, b) => updatedAt(a).localeCompare(updatedAt(b)));
     return list;
   }, [filtered, sortBy]);
 
@@ -186,6 +189,8 @@ export default function HomePage() {
               <option value="name-desc">Nom (Z → A)</option>
               <option value="death-asc">Date de décès (ancien → récent)</option>
               <option value="death-desc">Date de décès (récent → ancien)</option>
+              <option value="updated-desc">Dernière modification (récent → ancien)</option>
+              <option value="updated-asc">Dernière modification (ancien → récent)</option>
             </select>
             <div className="view-toggle" role="group" aria-label="Affichage">
               <button
