@@ -61,26 +61,41 @@ export async function PUT(
         : undefined;
   const sonIdsArr = body.sonIds !== undefined && Array.isArray(body.sonIds) ? body.sonIds.filter((id): id is string => typeof id === 'string') : undefined;
   const brotherIdsArr = body.brotherIds !== undefined && Array.isArray(body.brotherIds) ? body.brotherIds.filter((id): id is string => typeof id === 'string') : undefined;
-  const updated = await updateBiography(id, {
-    name: body.name,
-    summary: body.summary,
-    fullBio: body.fullBio,
-    birthDate: body.birthDate,
-    deathDate: body.deathDate,
-    title: body.title,
-    imageUrl: urls !== undefined ? urls[0] : body.imageUrl,
-    imageUrls: urls,
-    fatherId: body.fatherId !== undefined ? (body.fatherId?.trim() || undefined) : undefined,
-    sonIds: sonIdsArr,
-    brotherIds: brotherIdsArr,
-    lastEditedAt: now,
-    lastEditedBy: editorEmail,
-  });
-  if (!updated) {
-    return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+  try {
+    const updated = await updateBiography(id, {
+      name: body.name,
+      summary: body.summary,
+      fullBio: body.fullBio,
+      birthDate: body.birthDate,
+      deathDate: body.deathDate,
+      title: body.title,
+      imageUrl: urls !== undefined ? urls[0] : body.imageUrl,
+      imageUrls: urls,
+      fatherId: body.fatherId !== undefined ? (body.fatherId?.trim() || undefined) : undefined,
+      sonIds: sonIdsArr,
+      brotherIds: brotherIdsArr,
+      lastEditedAt: now,
+      lastEditedBy: editorEmail,
+    });
+    if (!updated) {
+      return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    }
+    const outUrls = getImageUrls(updated);
+    return NextResponse.json({ ...updated, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('PUT /api/biographies/[id] error:', e);
+    if (msg.includes('father_id') || msg.includes('son_ids') || msg.includes('brother_ids') || msg.includes('does not exist')) {
+      return NextResponse.json(
+        { error: 'Les champs de lien familial (père, fils, frères) ne sont pas encore disponibles. Exécutez la migration Supabase : docs/supabase-migration-relationships.sql' },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json(
+      { error: msg.length < 200 ? msg : 'Erreur lors de l’enregistrement' },
+      { status: 500 }
+    );
   }
-  const outUrls = getImageUrls(updated);
-  return NextResponse.json({ ...updated, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });
 }
 
 export async function DELETE(

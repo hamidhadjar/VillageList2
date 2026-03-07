@@ -105,9 +105,9 @@ export async function updateBiography(
       row.image_url = input.imageUrl ?? null;
       row.image_urls = input.imageUrl ? [input.imageUrl] : [];
     }
-    if (input.fatherId !== undefined) row.father_id = input.fatherId || null;
-    if (input.sonIds !== undefined) row.son_ids = input.sonIds?.length ? input.sonIds : null;
-    if (input.brotherIds !== undefined) row.brother_ids = input.brotherIds?.length ? input.brotherIds : null;
+    if (input.fatherId !== undefined) row.father_id = input.fatherId?.trim() || null;
+    if (input.sonIds !== undefined) row.son_ids = input.sonIds?.length ? input.sonIds : [];
+    if (input.brotherIds !== undefined) row.brother_ids = input.brotherIds?.length ? input.brotherIds : [];
     const now = new Date().toISOString();
     row.updated_at = now;
     if (input.lastEditedAt !== undefined) row.last_edited_at = input.lastEditedAt;
