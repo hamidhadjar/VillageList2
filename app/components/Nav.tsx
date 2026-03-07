@@ -2,17 +2,46 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import type { Role } from '@/lib/user-types';
 
+function NavLink({
+  href,
+  children,
+  active,
+}: {
+  href: string;
+  children: React.ReactNode;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`nav-tab ${active ? 'nav-tab-active' : ''}`}
+      aria-current={active ? 'page' : undefined}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function Nav() {
+  const pathname = usePathname() ?? '';
   const { data: session, status } = useSession();
   const role = (session?.user as { role?: Role })?.role;
 
+  const isHome = pathname === '/';
+  const isTree = pathname.startsWith('/tree');
+  const isStats = pathname.startsWith('/stats');
+  const isAdd = pathname.startsWith('/add');
+  const isUsers = pathname.startsWith('/admin/users');
+  const isLogin = pathname.startsWith('/login');
+
   return (
-    <nav className="nav">
+    <nav className="nav" role="navigation">
       <div className="nav-inner">
-        <Link href="/" className="nav-brand">
+        <Link href="/" className="nav-brand" aria-label="Accueil">
           <Image
             src="/logo.png"
             alt="Association Sociale IXULAF - Imaghdacen"
@@ -23,33 +52,52 @@ export function Nav() {
           />
           <span className="nav-title">Gestion des biographies</span>
         </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <Link href="/tree">Arbre généalogique</Link>
-          <Link href="/stats">Statistiques</Link>
+        <div className="nav-tabs">
+          <NavLink href="/" active={isHome}>
+            Biographies
+          </NavLink>
+          <NavLink href="/tree" active={isTree}>
+            Arbre généalogique
+          </NavLink>
+          <NavLink href="/stats" active={isStats}>
+            Statistiques
+          </NavLink>
           {(role === 'admin' || role === 'edit') && (
-            <Link href="/add">Ajouter une biographie</Link>
+            <NavLink href="/add" active={isAdd}>
+              Ajouter
+            </NavLink>
           )}
           {role === 'admin' && (
-            <Link href="/admin/users">Utilisateurs</Link>
+            <NavLink href="/admin/users" active={isUsers}>
+              Utilisateurs
+            </NavLink>
           )}
+        </div>
+        <div className="nav-actions">
           {status === 'loading' ? (
             <span className="nav-muted">Chargement…</span>
           ) : session ? (
             <>
-              <span className="nav-muted" title={role}>
-                {session.user?.email} ({role === 'admin' ? 'admin' : role === 'edit' ? 'éditeur' : 'lecteur'})
+              <span className="nav-user" title={role}>
+                {session.user?.email}
+                <span className="nav-role">{role === 'admin' ? 'admin' : role === 'edit' ? 'éditeur' : 'lecteur'}</span>
               </span>
               <button
                 type="button"
-                className="btn btn-ghost"
-                style={{ padding: '0.35rem 0.75rem' }}
+                className="btn btn-ghost nav-btn-outline"
                 onClick={() => signOut({ callbackUrl: '/login' })}
               >
                 Déconnexion
               </button>
             </>
           ) : (
-            <Link href="/login">Connexion</Link>
+            <Link
+              href="/login"
+              className={`nav-tab nav-tab-action ${isLogin ? 'nav-tab-active' : ''}`}
+              aria-current={isLogin ? 'page' : undefined}
+            >
+              Connexion
+            </Link>
           )}
         </div>
       </div>

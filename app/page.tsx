@@ -141,7 +141,7 @@ export default function HomePage() {
 
   return (
     <div className="container">
-      <div className="page-header" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem', justifyContent: 'space-between' }}>
+      <div className="page-header page-header-with-actions">
         <div>
           <h1>Biographies</h1>
           {biographies.length > 0 && (

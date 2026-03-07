@@ -201,7 +201,7 @@ export default function TreePage() {
   if (withRelations.length === 0) {
     return (
       <div className="container">
-        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="page-header page-header-with-actions">
           <h1>Arbre généalogique</h1>
           <Link href="/" className="btn btn-ghost">Retour à la liste</Link>
         </div>
@@ -222,7 +222,7 @@ export default function TreePage() {
 
   return (
     <div className="container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="page-header page-header-with-actions">
         <h1>Arbre généalogique</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <a
