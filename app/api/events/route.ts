@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       ? body.imageUrls.filter((u): u is string => typeof u === 'string').map((u) => u.trim()).filter(Boolean)
       : undefined;
     const event = await createEvent({
+      title: body.title?.trim() || undefined,
       date: body.date?.trim() || undefined,
       place: body.place?.trim() || undefined,
       description: description || 'Sans description',

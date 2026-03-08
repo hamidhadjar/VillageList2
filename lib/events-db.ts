@@ -10,6 +10,7 @@ function rowToEvent(row: Record<string, unknown>): Event {
     : (row.image_url as string) ? [row.image_url as string] : [];
   return {
     id: String(row.id ?? ''),
+    title: (row.title as string)?.trim() || undefined,
     date: (row.date as string)?.trim() || undefined,
     place: (row.place as string)?.trim() || undefined,
     description: (row.description as string) ?? '',
@@ -66,6 +67,7 @@ export async function createEvent(
       const now = new Date().toISOString();
       const imageUrls = input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : []);
       const row = {
+        title: input.title?.trim() || null,
         date: input.date?.trim() || null,
         place: input.place?.trim() || null,
         description: input.description?.trim() ?? '',
@@ -94,6 +96,7 @@ export async function updateEvent(
       const row: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
+      if (input.title !== undefined) row.title = input.title?.trim() || null;
       if (input.date !== undefined) row.date = input.date?.trim() || null;
       if (input.place !== undefined) row.place = input.place?.trim() || null;
       if (input.description !== undefined) row.description = input.description?.trim() ?? '';

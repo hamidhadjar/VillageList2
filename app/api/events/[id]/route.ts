@@ -31,11 +31,12 @@ export async function PUT(
   }
   const { id } = await params;
   try {
-    const body = (await request.json()) as { date?: string; place?: string; description?: string; imageUrls?: string[] };
+    const body = (await request.json()) as { title?: string; date?: string; place?: string; description?: string; imageUrls?: string[] };
     const imageUrls = Array.isArray(body.imageUrls)
       ? body.imageUrls.filter((u): u is string => typeof u === 'string').map((u) => u.trim()).filter(Boolean)
       : undefined;
     const updated = await updateEvent(id, {
+      title: body.title !== undefined ? (body.title?.trim() || undefined) : undefined,
       date: body.date !== undefined ? (body.date?.trim() || undefined) : undefined,
       place: body.place !== undefined ? (body.place?.trim() || undefined) : undefined,
       description: body.description !== undefined ? (body.description?.trim() ?? '') : undefined,

@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { normalizeImageUrl } from '@/lib/types';
 import type { Event } from '@/lib/event-types';
 import type { Role } from '@/lib/user-types';
+
+type SortOption = 'title-asc' | 'title-desc' | 'date-asc' | 'date-desc' | 'updated-desc' | 'updated-asc';
 
 const CAN_EDIT: Role[] = ['edit', 'admin'];
 
@@ -16,10 +18,12 @@ export default function EventsPage() {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterTitle, setFilterTitle] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [filterPlace, setFilterPlace] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('updated-desc');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ date: '', place: '', description: '', imageUrls: [] as string[] });
+  const [form, setForm] = useState({ title: '', date: '', place: '', description: '', imageUrls: [] as string[] });
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -28,11 +32,27 @@ export default function EventsPage() {
   const [error, setError] = useState('');
 
   const filteredEvents = events.filter((ev) => {
+    const titleMatch = !filterTitle.trim() || (ev.title ?? '').toLowerCase().includes(filterTitle.trim().toLowerCase());
     const dateMatch = !filterDate.trim() || (ev.date ?? '').toLowerCase().includes(filterDate.trim().toLowerCase());
     const placeMatch = !filterPlace.trim() || (ev.place ?? '').toLowerCase().includes(filterPlace.trim().toLowerCase());
-    return dateMatch && placeMatch;
+    return titleMatch && dateMatch && placeMatch;
   });
-  const hasActiveFilters = filterDate.trim() !== '' || filterPlace.trim() !== '';
+
+  const sortedEvents = useMemo(() => {
+    const list = [...filteredEvents];
+    const updatedAt = (ev: Event) => ev.updatedAt || ev.createdAt || '';
+    const titleOrEmpty = (ev: Event) => (ev.title ?? '').toLowerCase();
+    const dateOrEmpty = (ev: Event) => (ev.date ?? '').toLowerCase();
+    if (sortBy === 'title-asc') list.sort((a, b) => titleOrEmpty(a).localeCompare(titleOrEmpty(b), 'fr'));
+    else if (sortBy === 'title-desc') list.sort((a, b) => titleOrEmpty(b).localeCompare(titleOrEmpty(a), 'fr'));
+    else if (sortBy === 'date-asc') list.sort((a, b) => dateOrEmpty(a).localeCompare(dateOrEmpty(b), 'fr'));
+    else if (sortBy === 'date-desc') list.sort((a, b) => dateOrEmpty(b).localeCompare(dateOrEmpty(a), 'fr'));
+    else if (sortBy === 'updated-desc') list.sort((a, b) => updatedAt(b).localeCompare(updatedAt(a)));
+    else if (sortBy === 'updated-asc') list.sort((a, b) => updatedAt(a).localeCompare(updatedAt(b)));
+    return list;
+  }, [filteredEvents, sortBy]);
+
+  const hasActiveFilters = !!(filterTitle.trim() || filterDate.trim() || filterPlace.trim());
 
   const fetchEvents = async () => {
     const res = await fetch('/api/events');
@@ -79,6 +99,7 @@ export default function EventsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          title: form.title.trim() || undefined,
           date: form.date.trim() || undefined,
           place: form.place.trim() || undefined,
           description: form.description.trim() || 'Sans description',
@@ -91,7 +112,7 @@ export default function EventsPage() {
         setSaving(false);
         return;
       }
-      setForm({ date: '', place: '', description: '', imageUrls: [] });
+      setForm({ title: '', date: '', place: '', description: '', imageUrls: [] });
       setPendingFiles([]);
       pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
       setPendingPreviews([]);
@@ -115,6 +136,7 @@ export default function EventsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          title: form.title.trim() || undefined,
           date: form.date.trim() || undefined,
           place: form.place.trim() || undefined,
           description: form.description.trim() || '',
@@ -129,7 +151,7 @@ export default function EventsPage() {
       }
       setEvents((prev) => prev.map((ev) => (ev.id === editingId ? data : ev)));
       setEditingId(null);
-      setForm({ date: '', place: '', description: '', imageUrls: [] });
+      setForm({ title: '', date: '', place: '', description: '', imageUrls: [] });
       setPendingFiles([]);
       pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
       setPendingPreviews([]);
@@ -144,6 +166,7 @@ export default function EventsPage() {
     setShowAddForm(false);
     setEditingId(ev.id);
     setForm({
+      title: ev.title ?? '',
       date: ev.date ?? '',
       place: ev.place ?? '',
       description: ev.description ?? '',
@@ -158,7 +181,7 @@ export default function EventsPage() {
   const cancelEdit = () => {
     setEditingId(null);
     setShowAddForm(false);
-    setForm({ date: '', place: '', description: '', imageUrls: [] });
+    setForm({ title: '', date: '', place: '', description: '', imageUrls: [] });
     setPendingFiles([]);
     pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
     setPendingPreviews([]);
@@ -209,8 +232,11 @@ export default function EventsPage() {
           <h1>Événements</h1>
           {events.length > 0 && (
             <p className="page-header-count">
-              <strong>{filteredEvents.length}</strong> événement{filteredEvents.length !== 1 ? 's' : ''} affiché{filteredEvents.length !== 1 ? 's' : ''}
-              {hasActiveFilters && ` sur ${events.length}`}
+              {hasActiveFilters ? (
+                <>Affichage de <strong>{filteredEvents.length}</strong> sur <strong>{events.length}</strong> événement(s)</>
+              ) : (
+                <><strong>{events.length}</strong> événement(s) au total</>
+              )}
             </p>
           )}
         </div>
@@ -231,7 +257,7 @@ export default function EventsPage() {
           {events.length > 0 && filteredEvents.length > 0 && (
             <>
               <a
-                href={`/api/events/export?format=pdf&date=${encodeURIComponent(filterDate)}&place=${encodeURIComponent(filterPlace)}`}
+                href={`/api/events/export?format=pdf&title=${encodeURIComponent(filterTitle)}&date=${encodeURIComponent(filterDate)}&place=${encodeURIComponent(filterPlace)}&sort=${sortBy}`}
                 className="btn btn-ghost"
                 download
                 target="_blank"
@@ -240,7 +266,7 @@ export default function EventsPage() {
                 Exporter tout (PDF)
               </a>
               <a
-                href={`/api/events/export?format=docx&date=${encodeURIComponent(filterDate)}&place=${encodeURIComponent(filterPlace)}`}
+                href={`/api/events/export?format=docx&title=${encodeURIComponent(filterTitle)}&date=${encodeURIComponent(filterDate)}&place=${encodeURIComponent(filterPlace)}&sort=${sortBy}`}
                 className="btn btn-ghost"
                 download
                 target="_blank"
@@ -255,8 +281,18 @@ export default function EventsPage() {
 
       {events.length > 0 && (
         <div className="card search-bar" style={{ marginBottom: '1rem' }}>
-          <label className="search-bar-label">Filtrer</label>
+          <label className="search-bar-label">Recherche</label>
           <div className="search-bar-fields">
+            <div className="form-group search-field">
+              <label htmlFor="filter-title">Titre</label>
+              <input
+                id="filter-title"
+                type="text"
+                placeholder="Filtrer par titre…"
+                value={filterTitle}
+                onChange={(e) => setFilterTitle(e.target.value)}
+              />
+            </div>
             <div className="form-group search-field">
               <label htmlFor="filter-date">Date</label>
               <input
@@ -278,6 +314,22 @@ export default function EventsPage() {
               />
             </div>
           </div>
+          <div className="sort-row">
+            <label htmlFor="sort-by" className="sort-label">Trier par</label>
+            <select
+              id="sort-by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="sort-select"
+            >
+              <option value="title-asc">Titre (A → Z)</option>
+              <option value="title-desc">Titre (Z → A)</option>
+              <option value="date-asc">Date (ancien → récent)</option>
+              <option value="date-desc">Date (récent → ancien)</option>
+              <option value="updated-desc">Dernière modification (récent → ancien)</option>
+              <option value="updated-asc">Dernière modification (ancien → récent)</option>
+            </select>
+          </div>
           {hasActiveFilters && (
             <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <span className="meta">
@@ -287,6 +339,7 @@ export default function EventsPage() {
                 type="button"
                 className="btn btn-ghost"
                 onClick={() => {
+                  setFilterTitle('');
                   setFilterDate('');
                   setFilterPlace('');
                 }}
@@ -307,6 +360,16 @@ export default function EventsPage() {
             onSubmit={editingId ? handleSubmitEdit : handleSubmitAdd}
             style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
           >
+            <div className="form-group">
+              <label htmlFor="event-title">Titre</label>
+              <input
+                id="event-title"
+                type="text"
+                placeholder="ex. Fête du village"
+                value={form.title}
+                onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+              />
+            </div>
             <div className="form-group">
               <label>Photos (plusieurs possibles)</label>
               {(form.imageUrls.length > 0 || pendingPreviews.length > 0) && (
@@ -413,6 +476,7 @@ export default function EventsPage() {
             type="button"
             className="btn btn-ghost"
             onClick={() => {
+              setFilterTitle('');
               setFilterDate('');
               setFilterPlace('');
             }}
@@ -422,7 +486,7 @@ export default function EventsPage() {
         </div>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {filteredEvents.map((ev) => {
+          {sortedEvents.map((ev) => {
             const urls = ev.imageUrls?.length ? ev.imageUrls : (ev.imageUrl ? [ev.imageUrl] : []);
             return (
             <li key={ev.id} className="card" style={{ marginBottom: '0.75rem' }}>
@@ -440,6 +504,9 @@ export default function EventsPage() {
                         />
                       ))}
                     </div>
+                  )}
+                  {ev.title && (
+                    <h3 style={{ fontSize: '1.1rem', margin: '0 0 0.35rem 0', fontWeight: 600 }}>{ev.title}</h3>
                   )}
                   {(ev.date || ev.place) && (
                     <p className="meta" style={{ marginBottom: '0.35rem' }}>

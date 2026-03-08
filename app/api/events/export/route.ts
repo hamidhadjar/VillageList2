@@ -39,12 +39,29 @@ async function fetchImagesForEvent(ev: Event, origin: string): Promise<ImageData
   return results.filter((r): r is ImageData => r !== null);
 }
 
-function filterEvents(events: Event[], dateFilter: string, placeFilter: string): Event[] {
+type SortOption = 'title-asc' | 'title-desc' | 'date-asc' | 'date-desc' | 'updated-desc' | 'updated-asc';
+
+function filterEvents(events: Event[], titleFilter: string, dateFilter: string, placeFilter: string): Event[] {
   return events.filter((ev) => {
+    const titleMatch = !titleFilter.trim() || (ev.title ?? '').toLowerCase().includes(titleFilter.trim().toLowerCase());
     const dateMatch = !dateFilter.trim() || (ev.date ?? '').toLowerCase().includes(dateFilter.trim().toLowerCase());
     const placeMatch = !placeFilter.trim() || (ev.place ?? '').toLowerCase().includes(placeFilter.trim().toLowerCase());
-    return dateMatch && placeMatch;
+    return titleMatch && dateMatch && placeMatch;
   });
+}
+
+function sortEvents(events: Event[], sort: SortOption): Event[] {
+  const list = [...events];
+  const updatedAt = (ev: Event) => ev.updatedAt || ev.createdAt || '';
+  const titleOrEmpty = (ev: Event) => (ev.title ?? '').toLowerCase();
+  const dateOrEmpty = (ev: Event) => (ev.date ?? '').toLowerCase();
+  if (sort === 'title-asc') list.sort((a, b) => titleOrEmpty(a).localeCompare(titleOrEmpty(b), 'fr'));
+  else if (sort === 'title-desc') list.sort((a, b) => titleOrEmpty(b).localeCompare(titleOrEmpty(a), 'fr'));
+  else if (sort === 'date-asc') list.sort((a, b) => dateOrEmpty(a).localeCompare(dateOrEmpty(b), 'fr'));
+  else if (sort === 'date-desc') list.sort((a, b) => dateOrEmpty(b).localeCompare(dateOrEmpty(a), 'fr'));
+  else if (sort === 'updated-desc') list.sort((a, b) => updatedAt(b).localeCompare(updatedAt(a)));
+  else if (sort === 'updated-asc') list.sort((a, b) => updatedAt(a).localeCompare(updatedAt(b)));
+  return list;
 }
 
 function addOneEventToPdf(
@@ -81,8 +98,15 @@ function addOneEventToPdf(
     y += 2;
   }
 
-  doc.setFontSize(12);
-  doc.setTextColor(60, 60, 60);
+  if (ev.title) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    addBlock(ev.title, 12);
+    doc.setFont('helvetica', 'normal');
+    y += 2;
+  }
+  doc.setFontSize(10);
+  doc.setTextColor(80, 80, 80);
   const subtitle = [ev.date, ev.place].filter(Boolean).join(' — ');
   if (subtitle) addBlock(subtitle, 10);
   doc.setTextColor(0, 0, 0);
@@ -125,6 +149,14 @@ function buildPdfAll(events: Event[], imagesPerEvent: ImageData[][]): Buffer {
 
 function paragraphsForOneEvent(ev: Event, images: ImageData[]): Paragraph[] {
   const children: Paragraph[] = [];
+  if (ev.title) {
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: ev.title, bold: true, size: 24 })],
+        spacing: { after: 120 },
+      })
+    );
+  }
   const subtitle = [ev.date, ev.place].filter(Boolean).join(' — ');
   if (subtitle) {
     children.push(
@@ -183,10 +215,14 @@ async function buildDocxAll(events: Event[], imagesPerEvent: ImageData[][]): Pro
   return Packer.toBuffer(doc);
 }
 
+const VALID_SORT: SortOption[] = ['title-asc', 'title-desc', 'date-asc', 'date-desc', 'updated-desc', 'updated-asc'];
+
 export async function GET(request: NextRequest) {
   const format = request.nextUrl.searchParams.get('format')?.toLowerCase();
+  const titleFilter = request.nextUrl.searchParams.get('title') ?? '';
   const dateFilter = request.nextUrl.searchParams.get('date') ?? '';
   const placeFilter = request.nextUrl.searchParams.get('place') ?? '';
+  const sortParam = (request.nextUrl.searchParams.get('sort') ?? 'updated-desc') as SortOption;
 
   if (!format || (format !== 'pdf' && format !== 'docx')) {
     return NextResponse.json(
@@ -194,9 +230,11 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
+  const sort = VALID_SORT.includes(sortParam) ? sortParam : 'updated-desc';
 
   const allEvents = await getAllEvents();
-  const events = filterEvents(allEvents, dateFilter, placeFilter);
+  const filtered = filterEvents(allEvents, titleFilter, dateFilter, placeFilter);
+  const events = sortEvents(filtered, sort);
 
   if (events.length === 0) {
     return NextResponse.json(

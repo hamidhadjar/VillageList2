@@ -3,6 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT,
   date TEXT,
   place TEXT,
   description TEXT NOT NULL DEFAULT '',
@@ -12,7 +13,8 @@ CREATE TABLE IF NOT EXISTS events (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- If you already have the events table without image columns, run:
+-- If you already have the events table, add missing columns:
+-- ALTER TABLE events ADD COLUMN IF NOT EXISTS title TEXT;
 -- ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT;
 -- ALTER TABLE events ADD COLUMN IF NOT EXISTS image_urls JSONB;
 
