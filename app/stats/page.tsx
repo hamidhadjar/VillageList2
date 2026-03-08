@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   BarChart,
@@ -13,6 +13,8 @@ import {
   Cell,
 } from 'recharts';
 import type { Biography } from '@/lib/types';
+
+const CHART_HEIGHT = 340;
 
 const START_YEAR = 1954;
 const END_YEAR = 1965;
@@ -35,6 +37,20 @@ type YearCount = { year: number; count: number; label: string };
 export default function StatsPage() {
   const [biographies, setBiographies] = useState<Biography[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chartMounted, setChartMounted] = useState(false);
+
+  useLayoutEffect(() => {
+    let cancelled = false;
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) setChartMounted(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,8 +124,9 @@ export default function StatsPage() {
           )}
         </p>
 
-        <div style={{ width: '100%', height: 340 }}>
-          <ResponsiveContainer>
+        <div style={{ width: '100%', minWidth: 1, height: CHART_HEIGHT, minHeight: CHART_HEIGHT }}>
+          {chartMounted ? (
+          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
             <BarChart
               data={chartData}
               margin={{ top: 16, right: 16, left: 0, bottom: 8 }}
@@ -144,6 +161,9 @@ export default function StatsPage() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          ) : (
+            <div style={{ width: '100%', height: '100%', minHeight: CHART_HEIGHT }} aria-hidden="true" />
+          )}
         </div>
       </div>
     </div>
