@@ -34,17 +34,32 @@ export default function AdminHistoryPage() {
   const [entries, setEntries] = useState<EditHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      const res = await fetch('/api/admin/history?limit=200', { credentials: 'same-origin' });
-      if (res.ok) {
-        const data = await res.json();
-        setEntries(data);
-        setForbidden(false);
-      } else if (res.status === 403) {
+      setFetchError(null);
+      try {
+        const res = await fetch('/api/admin/history?limit=200', { credentials: 'same-origin' });
+        if (res.ok) {
+          let data: unknown;
+          try {
+            data = await res.json();
+          } catch {
+            data = [];
+          }
+          setEntries(Array.isArray(data) ? data : []);
+          setForbidden(false);
+        } else if (res.status === 403) {
+          setEntries([]);
+          setForbidden(true);
+        } else {
+          setEntries([]);
+          setFetchError(res.status === 500 ? 'Erreur serveur.' : `Erreur ${res.status}`);
+        }
+      } catch {
         setEntries([]);
-        setForbidden(true);
+        setFetchError('Impossible de charger l’historique.');
       }
       setLoading(false);
     }
@@ -85,11 +100,21 @@ export default function AdminHistoryPage() {
         </p>
       </div>
 
-      {entries.length === 0 ? (
+      {fetchError ? (
+        <div className="card">
+          <p className="empty-state" style={{ color: 'var(--danger)' }}>{fetchError}</p>
+          <p className="meta" style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+            Vérifiez que vous êtes connecté en tant qu’administrateur et réessayez.
+          </p>
+        </div>
+      ) : entries.length === 0 ? (
         <div className="card">
           <p className="empty-state">Aucune action enregistrée.</p>
           <p className="meta" style={{ textAlign: 'center', marginTop: '0.5rem' }}>
             Les créations, modifications et suppressions de biographies, événements et utilisateurs apparaîtront ici.
+          </p>
+          <p className="meta" style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+            Avec Supabase : exécutez <code style={{ fontSize: '0.9em' }}>docs/supabase-migration-edit-history.sql</code> dans le SQL Editor pour créer la table <code>edit_history</code>.
           </p>
         </div>
       ) : (

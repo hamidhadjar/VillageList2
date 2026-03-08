@@ -17,10 +17,11 @@ function ensureDataDir(): void {
 }
 
 function readEntries(): EditHistoryEntry[] {
-  if (!fs.existsSync(FILE_PATH)) return [];
   try {
+    if (typeof fs.existsSync !== 'function' || !fs.existsSync(FILE_PATH)) return [];
     const raw = fs.readFileSync(FILE_PATH, 'utf-8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }

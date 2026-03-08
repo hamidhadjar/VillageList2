@@ -47,19 +47,18 @@ export function logEditHistory(input: EditHistoryInput): void {
 }
 
 export async function getAllEditHistory(limit = 200): Promise<EditHistoryEntry[]> {
-  const supabase = getSupabase();
-  if (supabase) {
-    try {
+  try {
+    const supabase = getSupabase();
+    if (supabase) {
       const { data, error } = await supabase
         .from(TABLE)
         .select('*')
         .order('created_at', { ascending: false })
         .limit(limit);
-      if (error) throw error;
-      return (data ?? []).map(rowToEntry);
-    } catch {
-      return editHistoryStore.getAllEntries(limit);
+      if (!error && data != null) return data.map(rowToEntry);
     }
+    return editHistoryStore.getAllEntries(limit);
+  } catch {
+    return editHistoryStore.getAllEntries(limit);
   }
-  return editHistoryStore.getAllEntries(limit);
 }
