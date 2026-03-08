@@ -2,16 +2,30 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { normalizeImageUrl } from '@/lib/types';
 import type { Event } from '@/lib/event-types';
 import type { Role } from '@/lib/user-types';
 
+function formatLastEditedShort(ev: Event): string | null {
+  const at = ev.updatedAt || ev.createdAt;
+  if (!at) return null;
+  try {
+    const d = new Date(at);
+    return 'Modifié le ' + new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
+  } catch {
+    return 'Modifié';
+  }
+}
+
 type SortOption = 'title-asc' | 'title-desc' | 'date-asc' | 'date-desc' | 'updated-desc' | 'updated-asc';
+type ViewMode = 'list' | 'gallery';
 
 const CAN_EDIT: Role[] = ['edit', 'admin'];
 
 export default function EventsPage() {
   const { data: session } = useSession();
+  const { showLastEdited, setShowLastEdited } = useShowLastEdited();
   const role = (session?.user as { role?: Role })?.role;
   const canEdit = role && CAN_EDIT.includes(role);
   const canDelete = role === 'admin';
@@ -22,6 +36,7 @@ export default function EventsPage() {
   const [filterDate, setFilterDate] = useState('');
   const [filterPlace, setFilterPlace] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('updated-desc');
+  const [viewMode, setViewMode] = useState<ViewMode>('gallery'); // gallery is the default; list/gallery preference is persisted in localStorage
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', date: '', place: '', description: '', imageUrls: [] as string[] });
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -66,6 +81,23 @@ export default function EventsPage() {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('eventsViewMode') as ViewMode | null;
+      if (saved === 'list' || saved === 'gallery') setViewMode(saved);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('eventsViewMode', viewMode);
+    } catch {
+      // ignore
+    }
+  }, [viewMode]);
 
   const uploadPendingFiles = async (): Promise<string[]> => {
     const uploaded: string[] = [];
@@ -329,6 +361,31 @@ export default function EventsPage() {
               <option value="updated-desc">Dernière modification (récent → ancien)</option>
               <option value="updated-asc">Dernière modification (ancien → récent)</option>
             </select>
+            <div className="view-toggle" role="group" aria-label="Affichage">
+              <button
+                type="button"
+                className={`btn btn-ghost ${viewMode === 'list' ? 'btn-toggle-active' : ''}`}
+                onClick={() => setViewMode('list')}
+              >
+                Liste
+              </button>
+              <button
+                type="button"
+                className={`btn btn-ghost ${viewMode === 'gallery' ? 'btn-toggle-active' : ''}`}
+                onClick={() => setViewMode('gallery')}
+              >
+                Galerie
+              </button>
+            </div>
+            <label className="sort-row-toggle-label">
+              <input
+                type="checkbox"
+                checked={showLastEdited}
+                onChange={(e) => setShowLastEdited(e.target.checked)}
+                className="sort-row-toggle-checkbox"
+              />
+              <span className="sort-label">Dernière modif.</span>
+            </label>
           </div>
           {hasActiveFilters && (
             <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -484,10 +541,62 @@ export default function EventsPage() {
             Effacer les filtres
           </button>
         </div>
+      ) : viewMode === 'gallery' ? (
+        <div className="gallery-grid">
+          {sortedEvents.map((ev) => {
+            const urls = ev.imageUrls?.length ? ev.imageUrls : (ev.imageUrl ? [ev.imageUrl] : []);
+            const firstUrl = urls[0];
+            const placeholderLetter = (ev.title ?? 'É').trim().slice(0, 1).toUpperCase() || 'É';
+            const shortDesc = ev.description?.trim() ? (ev.description.length > 140 ? ev.description.slice(0, 140).trim() + '…' : ev.description) : '';
+            const lastEditedStr = formatLastEditedShort(ev);
+            return (
+              <div key={ev.id} className="card gallery-card">
+                <div className="gallery-media" aria-hidden="true">
+                  {firstUrl ? (
+                    <img src={firstUrl} alt="" className="gallery-image" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  ) : (
+                    <div className="gallery-placeholder">
+                      <span>{placeholderLetter}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="gallery-body">
+                  <h2 className="gallery-title">{ev.title || 'Sans titre'}</h2>
+                  {(ev.date || ev.place) && (
+                    <p className="meta" style={{ marginTop: '0.25rem' }}>
+                      {ev.date && <span>{ev.date}</span>}
+                      {ev.date && ev.place && ' — '}
+                      {ev.place && <span>{ev.place}</span>}
+                    </p>
+                  )}
+                  {showLastEdited && lastEditedStr && (
+                    <p className="meta bio-last-edited" style={{ marginTop: '0.25rem' }} title={lastEditedStr}>
+                      {lastEditedStr}
+                    </p>
+                  )}
+                  {shortDesc && <p style={{ margin: '0.5rem 0 0', fontSize: '0.95rem', lineHeight: 1.4 }}>{shortDesc}</p>}
+                  {canEdit && (
+                    <div className="actions" style={{ marginTop: '0.75rem' }}>
+                      <button type="button" className="btn btn-ghost" onClick={() => startEdit(ev)}>
+                        Modifier
+                      </button>
+                      {canDelete && (
+                        <button type="button" className="btn btn-danger" onClick={() => setDeleteId(ev.id)}>
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {sortedEvents.map((ev) => {
             const urls = ev.imageUrls?.length ? ev.imageUrls : (ev.imageUrl ? [ev.imageUrl] : []);
+            const lastEditedStr = formatLastEditedShort(ev);
             return (
             <li key={ev.id} className="card" style={{ marginBottom: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
@@ -513,6 +622,11 @@ export default function EventsPage() {
                       {ev.date && <span>{ev.date}</span>}
                       {ev.date && ev.place && ' — '}
                       {ev.place && <span>{ev.place}</span>}
+                    </p>
+                  )}
+                  {showLastEdited && lastEditedStr && (
+                    <p className="meta bio-last-edited" style={{ marginBottom: '0.35rem' }} title={lastEditedStr}>
+                      {lastEditedStr}
                     </p>
                   )}
                   <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{ev.description}</p>
