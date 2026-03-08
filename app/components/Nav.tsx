@@ -42,17 +42,46 @@ export function Nav() {
   return (
     <nav className="nav" role="navigation">
       <div className="nav-inner">
-        <Link href="/" className="nav-brand" aria-label="Accueil">
-          <Image
-            src="/logo.png"
-            alt="Association Sociale IXULAF - Imaghdacen"
-            width={120}
-            height={48}
-            className="nav-logo"
-            priority
-          />
-          <span className="nav-title">Gestion des biographies</span>
-        </Link>
+        <div className="nav-top">
+          <Link href="/" className="nav-brand" aria-label="Accueil">
+            <Image
+              src="/logo.png"
+              alt="Association Sociale IXULAF - Imaghdacen"
+              width={120}
+              height={48}
+              className="nav-logo"
+              priority
+            />
+            <span className="nav-title">Gestion des biographies</span>
+          </Link>
+          <div className="nav-actions">
+            {status === 'loading' ? (
+              <span className="nav-muted">Chargement…</span>
+            ) : session ? (
+              <>
+                <span className="nav-user" title={role}>
+                  {session.user?.email}
+                  <span className="nav-role">{role === 'admin' ? 'admin' : role === 'edit' ? 'éditeur' : 'lecteur'}</span>
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost nav-btn-outline"
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                >
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className={`nav-tab nav-tab-action ${isLogin ? 'nav-tab-active' : ''}`}
+                aria-current={isLogin ? 'page' : undefined}
+              >
+                Connexion
+              </Link>
+            )}
+          </div>
+        </div>
         <div className="nav-tabs">
           <NavLink href="/" active={isHome}>
             Biographies
@@ -75,33 +104,6 @@ export function Nav() {
                 Historique
               </NavLink>
             </>
-          )}
-        </div>
-        <div className="nav-actions">
-          {status === 'loading' ? (
-            <span className="nav-muted">Chargement…</span>
-          ) : session ? (
-            <>
-              <span className="nav-user" title={role}>
-                {session.user?.email}
-                <span className="nav-role">{role === 'admin' ? 'admin' : role === 'edit' ? 'éditeur' : 'lecteur'}</span>
-              </span>
-              <button
-                type="button"
-                className="btn btn-ghost nav-btn-outline"
-                onClick={() => signOut({ callbackUrl: '/login' })}
-              >
-                Déconnexion
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              className={`nav-tab nav-tab-action ${isLogin ? 'nav-tab-active' : ''}`}
-              aria-current={isLogin ? 'page' : undefined}
-            >
-              Connexion
-            </Link>
           )}
         </div>
       </div>

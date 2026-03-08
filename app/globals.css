@@ -315,20 +315,27 @@ input, textarea {
 
 .nav-inner {
   display: flex;
-  align-items: stretch;
-  justify-content: space-between;
+  flex-direction: column;
   max-width: 960px;
   margin: 0 auto;
   padding: 0 1rem;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0;
 }
 
 @media (min-width: 640px) {
   .nav-inner {
     padding: 0 1.25rem;
-    gap: 1.5rem;
   }
+}
+
+.nav-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem 0 0;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .nav-brand {
@@ -363,10 +370,12 @@ input, textarea {
   display: flex;
   align-items: stretch;
   gap: 0.25rem;
-  flex: 1 1 auto;
   flex-wrap: wrap;
   min-width: 0;
   justify-content: flex-start;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding-bottom: 0.25rem;
 }
 
 .nav-tab {
@@ -410,7 +419,7 @@ input, textarea {
 }
 
 .nav-tab-action {
-  margin-left: auto;
+  /* Connexion link lives in .nav-actions (top right) */
 }
 
 .nav-actions {
@@ -457,12 +466,12 @@ input, textarea {
 
 @media (max-width: 768px) {
   .nav-inner {
-    flex-direction: column;
-    align-items: flex-start;
     padding-bottom: 0.5rem;
   }
+  .nav-top {
+    padding-top: 0.25rem;
+  }
   .nav-tabs {
-    width: 100%;
     border-top: 1px solid var(--border);
     padding-top: 0.5rem;
     margin-top: 0.25rem;
@@ -473,10 +482,7 @@ input, textarea {
     min-height: 2.75rem;
   }
   .nav-actions {
-    width: 100%;
     justify-content: flex-end;
-    border-top: 1px solid var(--border);
-    padding-top: 0.5rem;
   }
   .nav-btn-outline {
     min-height: 2.75rem;
