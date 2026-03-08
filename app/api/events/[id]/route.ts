@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getEventById, updateEvent, deleteEvent } from '@/lib/events-db';
+import { logEditHistory } from '@/lib/edit-history-db';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 const EDIT_ROLES = ['edit', 'admin'];
@@ -49,6 +50,14 @@ export async function PUT(
     if (!updated) {
       return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
     }
+    logEditHistory({
+      userEmail: editorEmail,
+      userRole: (token.role as string) ?? undefined,
+      action: 'update',
+      entityType: 'event',
+      entityId: id,
+      entityLabel: updated.title?.trim() || undefined,
+    });
     return NextResponse.json(updated);
   } catch (e) {
     return NextResponse.json({ error: 'Impossible de modifier l’événement' }, { status: 500 });
@@ -65,10 +74,19 @@ export async function DELETE(
   }
   const { id } = await params;
   try {
+    const existing = await getEventById(id);
     const deleted = await deleteEvent(id);
     if (!deleted) {
       return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
     }
+    logEditHistory({
+      userEmail: (token.email as string) ?? '',
+      userRole: (token.role as string) ?? undefined,
+      action: 'delete',
+      entityType: 'event',
+      entityId: id,
+      entityLabel: existing?.title?.trim() || undefined,
+    });
     return NextResponse.json({ success: true });
   } catch (e) {
     return NextResponse.json({ error: 'Impossible de supprimer l’événement' }, { status: 500 });

@@ -36,6 +36,7 @@ export function Nav() {
   const isStats = pathname.startsWith('/stats');
   const isEvents = pathname.startsWith('/events');
   const isUsers = pathname.startsWith('/admin/users');
+  const isHistory = pathname.startsWith('/admin/history');
   const isLogin = pathname.startsWith('/login');
 
   return (
@@ -66,9 +67,14 @@ export function Nav() {
             Événements
           </NavLink>
           {role === 'admin' && (
-            <NavLink href="/admin/users" active={isUsers}>
-              Utilisateurs
-            </NavLink>
+            <>
+              <NavLink href="/admin/users" active={isUsers}>
+                Utilisateurs
+              </NavLink>
+              <NavLink href="/admin/history" active={isHistory}>
+                Historique
+              </NavLink>
+            </>
           )}
         </div>
         <div className="nav-actions">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getUserById, updateUser, deleteUser, getUserByEmail } from '@/lib/users-db';
+import { logEditHistory } from '@/lib/edit-history-db';
 import { hashPassword } from '@/lib/auth';
 import type { Role } from '@/lib/user-types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
@@ -51,6 +52,14 @@ export async function PUT(
   try {
     const user = await updateUser(id, updates);
     if (!user) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    logEditHistory({
+      userEmail: (token.email as string) ?? '',
+      userRole: (token.role as string) ?? undefined,
+      action: 'update',
+      entityType: 'user',
+      entityId: id,
+      entityLabel: user.email,
+    });
     return NextResponse.json(user);
   } catch (e) {
     const msg = e instanceof Error ? e.message : '';
@@ -77,8 +86,17 @@ export async function DELETE(
     return NextResponse.json({ error: 'Vous ne pouvez pas supprimer votre propre compte.' }, { status: 400 });
   }
   try {
+    const existing = await getUserById(id);
     const ok = await deleteUser(id);
     if (!ok) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    logEditHistory({
+      userEmail: (token.email as string) ?? '',
+      userRole: (token.role as string) ?? undefined,
+      action: 'delete',
+      entityType: 'user',
+      entityId: id,
+      entityLabel: existing?.email,
+    });
     return NextResponse.json({ success: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '';

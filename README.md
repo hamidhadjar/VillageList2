@@ -9,6 +9,7 @@ A Next.js app to manage people biographies: add, edit, and remove entries. Uses 
 2. **Database**: In Supabase → **SQL Editor**, run:
    - `docs/supabase-schema.sql` to create the `biographies` table
    - `docs/supabase-migration-events.sql` to create the `events` table (for the Événements page)
+   - `docs/supabase-migration-edit-history.sql` to create the `edit_history` table (for the admin Historique tab)
    - `docs/supabase-app-users.sql` if you use Supabase for login (app users)
 
 3. **Storage**: In Supabase → **Storage** → **New bucket**:
@@ -90,6 +91,7 @@ This message appears when you add or edit **biographies** or **events** on a hos
 3. **Create the tables** in Supabase → **SQL Editor**:
    - Run `docs/supabase-schema.sql` (biographies)
    - Run `docs/supabase-migration-events.sql` (events)
+   - Run `docs/supabase-migration-edit-history.sql` (admin edit history)
 4. **Redeploy** (or restart `npm run dev` locally) so the app picks up the new env vars.
 
 After that, writes go to Supabase instead of the filesystem and the message disappears.

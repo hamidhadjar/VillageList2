@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getAllUsers, createUser, getUserByEmail } from '@/lib/users-db';
+import { logEditHistory } from '@/lib/edit-history-db';
 import { hashPassword } from '@/lib/auth';
 import type { Role } from '@/lib/user-types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
@@ -49,6 +50,14 @@ export async function POST(request: NextRequest) {
       email: normalizedEmail,
       passwordHash,
       role,
+    });
+    logEditHistory({
+      userEmail: (token.email as string) ?? '',
+      userRole: (token.role as string) ?? undefined,
+      action: 'create',
+      entityType: 'user',
+      entityId: user.id,
+      entityLabel: user.email,
     });
     return NextResponse.json(user);
   } catch (e) {

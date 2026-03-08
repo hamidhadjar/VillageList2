@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getAllEvents, createEvent } from '@/lib/events-db';
+import { logEditHistory } from '@/lib/edit-history-db';
 import type { EventInput } from '@/lib/event-types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
@@ -36,6 +37,14 @@ export async function POST(request: NextRequest) {
       imageUrls: imageUrls?.length ? imageUrls : undefined,
       lastEditedAt: now,
       lastEditedBy: editorEmail,
+    });
+    logEditHistory({
+      userEmail: editorEmail,
+      userRole: (token.role as string) ?? undefined,
+      action: 'create',
+      entityType: 'event',
+      entityId: event.id,
+      entityLabel: event.title?.trim() || undefined,
     });
     return NextResponse.json(event);
   } catch (e) {

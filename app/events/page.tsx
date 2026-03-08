@@ -35,7 +35,7 @@ export default function EventsPage() {
   const { showLastEdited, setShowLastEdited } = useShowLastEdited();
   const role = (session?.user as { role?: Role })?.role;
   const canEdit = role && CAN_EDIT.includes(role);
-  const canDelete = role === 'admin';
+  const canDelete = role === 'admin'; // only admin can delete; editors must not see the delete button
 
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);

@@ -46,7 +46,7 @@ export default function HomePage() {
   const { showLastEdited, setShowLastEdited } = useShowLastEdited();
   const role = (session?.user as { role?: Role })?.role;
   const canEdit = role && CAN_EDIT.includes(role);
-  const canDelete = role === 'admin';
+  const canDelete = role === 'admin'; // only admin can delete; editors must not see the delete button
 
   const [biographies, setBiographies] = useState<Biography[]>([]);
   const [loading, setLoading] = useState(true);

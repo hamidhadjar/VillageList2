@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getAllBiographies, createBiography, getBiographyById, updateBiography } from '@/lib/db';
+import { logEditHistory } from '@/lib/edit-history-db';
 import { Biography, BiographyInput, getImageUrls, normalizeImageUrl } from '@/lib/types';
 import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
@@ -62,6 +63,14 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+    logEditHistory({
+      userEmail: (token.email as string) ?? '',
+      userRole: (token.role as string) ?? undefined,
+      action: 'create',
+      entityType: 'biography',
+      entityId: biography.id,
+      entityLabel: biography.name?.trim() || undefined,
+    });
     const outUrls = getImageUrls(biography);
     return NextResponse.json({ ...biography, imageUrls: outUrls.length ? outUrls : undefined, imageUrl: outUrls[0] });
   } catch (e) {
