@@ -86,22 +86,22 @@ export function Nav() {
           <NavLink href="/" active={isHome}>
             Biographies
           </NavLink>
+          <NavLink href="/events" active={isEvents}>
+            Événements
+          </NavLink>
           <NavLink href="/tree" active={isTree}>
             Arbre généalogique
           </NavLink>
           <NavLink href="/stats" active={isStats}>
             Statistiques
           </NavLink>
-          <NavLink href="/events" active={isEvents}>
-            Événements
-          </NavLink>
           {role === 'admin' && (
             <>
-              <NavLink href="/admin/users" active={isUsers}>
-                Utilisateurs
-              </NavLink>
               <NavLink href="/admin/history" active={isHistory}>
                 Historique
+              </NavLink>
+              <NavLink href="/admin/users" active={isUsers}>
+                Utilisateurs
               </NavLink>
             </>
           )}
