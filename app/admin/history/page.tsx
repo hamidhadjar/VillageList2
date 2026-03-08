@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { EditHistoryEntry } from '@/lib/edit-history-types';
+import type { EditHistoryEntry, DeleteHistoryRange } from '@/lib/edit-history-types';
 
 const ACTION_LABEL: Record<EditHistoryEntry['action'], string> = {
   create: 'Création',
@@ -15,6 +15,14 @@ const ENTITY_LABEL: Record<EditHistoryEntry['entityType'], string> = {
   event: 'Événement',
   user: 'Utilisateur',
 };
+
+const RANGE_OPTIONS: { value: DeleteHistoryRange; label: string }[] = [
+  { value: '1h', label: 'Dernière heure' },
+  { value: '1d', label: 'Dernier jour' },
+  { value: '7d', label: 'Dernière semaine' },
+  { value: '30d', label: 'Dernier mois' },
+  { value: 'all', label: 'Tout' },
+];
 
 function formatDate(iso: string): string {
   try {
@@ -35,36 +43,47 @@ export default function AdminHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [userFilter, setUserFilter] = useState<string>('');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteRange, setDeleteRange] = useState<DeleteHistoryRange>('7d');
+  const [deleteUser, setDeleteUser] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      setFetchError(null);
-      try {
-        const res = await fetch('/api/admin/history?limit=200', { credentials: 'same-origin' });
-        if (res.ok) {
-          let data: unknown;
-          try {
-            data = await res.json();
-          } catch {
-            data = [];
-          }
-          setEntries(Array.isArray(data) ? data : []);
-          setForbidden(false);
-        } else if (res.status === 403) {
-          setEntries([]);
-          setForbidden(true);
-        } else {
-          setEntries([]);
-          setFetchError(res.status === 500 ? 'Erreur serveur.' : `Erreur ${res.status}`);
+  const loadHistory = useCallback(async () => {
+    setFetchError(null);
+    try {
+      const params = new URLSearchParams({ limit: '200' });
+      if (userFilter.trim()) params.set('user', userFilter.trim());
+      const res = await fetch(`/api/admin/history?${params}`, { credentials: 'same-origin' });
+      if (res.ok) {
+        let data: unknown;
+        try {
+          data = await res.json();
+        } catch {
+          data = [];
         }
-      } catch {
+        setEntries(Array.isArray(data) ? data : []);
+        setForbidden(false);
+      } else if (res.status === 403) {
         setEntries([]);
-        setFetchError('Impossible de charger l’historique.');
+        setForbidden(true);
+      } else {
+        setEntries([]);
+        setFetchError(res.status === 500 ? 'Erreur serveur.' : `Erreur ${res.status}`);
       }
+    } catch {
+      setEntries([]);
+      setFetchError('Impossible de charger l’historique.');
+    } finally {
       setLoading(false);
     }
-    load();
-  }, []);
+  }, [userFilter]);
+
+  useEffect(() => {
+    setLoading(true);
+    loadHistory();
+  }, [loadHistory]);
 
   if (loading) {
     return (
@@ -91,6 +110,32 @@ export default function AdminHistoryPage() {
     );
   }
 
+  const uniqueEmails = Array.from(new Set(entries.map((e) => e.userEmail).filter(Boolean))).sort();
+
+  async function handleDeleteConfirm() {
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      const params = new URLSearchParams({ range: deleteRange });
+      if (deleteUser.trim()) params.set('user', deleteUser.trim());
+      const res = await fetch(`/api/admin/history?${params}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteError(data?.error ?? 'Erreur lors de la suppression');
+        return;
+      }
+      setDeleteModalOpen(false);
+      await loadHistory();
+    } catch {
+      setDeleteError('Impossible de contacter le serveur.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="container">
       <div className="page-header">
@@ -99,6 +144,114 @@ export default function AdminHistoryPage() {
           <strong>{entries.length}</strong> action{entries.length !== 1 ? 's' : ''} récente{entries.length !== 1 ? 's' : ''}
         </p>
       </div>
+
+      <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span className="meta">Filtrer par utilisateur :</span>
+          <select
+            value={userFilter}
+            onChange={(e) => setUserFilter(e.target.value)}
+            style={{ padding: '0.35rem 0.6rem', borderRadius: '4px', border: '1px solid var(--border)' }}
+          >
+            <option value="">Tous</option>
+            {uniqueEmails.map((email) => (
+              <option key={email} value={email}>
+                {email}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="btn"
+          style={{ marginLeft: 'auto' }}
+          onClick={() => {
+            setDeleteError(null);
+            setDeleteUser(userFilter);
+            setDeleteRange('7d');
+            setDeleteModalOpen(true);
+          }}
+        >
+          Vider l’historique
+        </button>
+      </div>
+
+      {deleteModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-modal-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => !deleting && setDeleteModalOpen(false)}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: '420px', width: '90%', margin: '1rem' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="delete-modal-title" style={{ marginTop: 0 }}>Vider l’historique</h2>
+            <p className="meta" style={{ marginBottom: '1rem' }}>
+              Choisissez la période à supprimer et éventuellement l’utilisateur concerné.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <label>
+                <span className="meta" style={{ display: 'block', marginBottom: '0.35rem' }}>Période</span>
+                <select
+                  value={deleteRange}
+                  onChange={(e) => setDeleteRange(e.target.value as DeleteHistoryRange)}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}
+                >
+                  {RANGE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="meta" style={{ display: 'block', marginBottom: '0.35rem' }}>Pour l’utilisateur (optionnel)</span>
+                <select
+                  value={deleteUser}
+                  onChange={(e) => setDeleteUser(e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}
+                >
+                  <option value="">Tous les utilisateurs</option>
+                  {uniqueEmails.map((email) => (
+                    <option key={email} value={email}>{email}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {deleteError && (
+              <p style={{ color: 'var(--danger)', marginTop: '0.75rem', fontSize: '0.9rem' }}>{deleteError}</p>
+            )}
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => !deleting && setDeleteModalOpen(false)}
+                disabled={deleting}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+              >
+                {deleting ? 'Suppression…' : 'Confirmer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {fetchError ? (
         <div className="card">

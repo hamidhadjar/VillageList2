@@ -205,6 +205,29 @@ export default function AddPage() {
           </div>
         </div>
         <div className="form-group">
+          <label htmlFor="summary">Résumé *</label>
+          <textarea
+            id="summary"
+            name="summary"
+            required
+            value={form.summary}
+            onChange={handleChange}
+            placeholder="Un bref résumé (affiché dans la liste)"
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="fullBio">Biographie complète *</label>
+          <textarea
+            id="fullBio"
+            name="fullBio"
+            required
+            value={form.fullBio}
+            onChange={handleChange}
+            placeholder="Récit de vie ou description complète"
+            style={{ minHeight: '200px' }}
+          />
+        </div>
+        <div className="form-group">
           <label htmlFor="fatherId">Père</label>
           <select
             id="fatherId"
@@ -234,29 +257,6 @@ export default function AddPage() {
           onChange={setBrotherIds}
           searchPlaceholder="Rechercher un frère…"
         />
-        <div className="form-group">
-          <label htmlFor="summary">Résumé *</label>
-          <textarea
-            id="summary"
-            name="summary"
-            required
-            value={form.summary}
-            onChange={handleChange}
-            placeholder="Un bref résumé (affiché dans la liste)"
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="fullBio">Biographie complète *</label>
-          <textarea
-            id="fullBio"
-            name="fullBio"
-            required
-            value={form.fullBio}
-            onChange={handleChange}
-            placeholder="Récit de vie ou description complète"
-            style={{ minHeight: '200px' }}
-          />
-        </div>
         {error && <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</p>}
         <div className="actions">
           <Link href="/" className="btn btn-ghost">

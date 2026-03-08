@@ -20,3 +20,10 @@ export interface EditHistoryInput {
   entityId?: string;
   entityLabel?: string;
 }
+
+export type DeleteHistoryRange = '1h' | '1d' | '7d' | '30d' | 'all';
+
+export interface DeleteHistoryOptions {
+  range: DeleteHistoryRange;
+  userEmail?: string;
+}

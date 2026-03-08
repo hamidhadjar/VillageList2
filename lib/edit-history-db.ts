@@ -1,8 +1,19 @@
 import { getSupabase } from './supabase';
 import * as editHistoryStore from './edit-history-store';
-import type { EditHistoryEntry, EditHistoryInput } from './edit-history-types';
+import type { EditHistoryEntry, EditHistoryInput, DeleteHistoryRange } from './edit-history-types';
 
 const TABLE = 'edit_history';
+
+function getCutoffIso(range: DeleteHistoryRange): string | null {
+  if (range === 'all') return null;
+  const now = Date.now();
+  let ms = 0;
+  if (range === '1h') ms = 60 * 60 * 1000;
+  else if (range === '1d') ms = 24 * 60 * 60 * 1000;
+  else if (range === '7d') ms = 7 * 24 * 60 * 60 * 1000;
+  else if (range === '30d') ms = 30 * 24 * 60 * 60 * 1000;
+  return new Date(now - ms).toISOString();
+}
 
 function rowToEntry(row: Record<string, unknown>): EditHistoryEntry {
   return {
@@ -46,19 +57,43 @@ export function logEditHistory(input: EditHistoryInput): void {
   });
 }
 
-export async function getAllEditHistory(limit = 200): Promise<EditHistoryEntry[]> {
+export async function getAllEditHistory(limit = 200, userEmail?: string): Promise<EditHistoryEntry[]> {
   try {
     const supabase = getSupabase();
     if (supabase) {
-      const { data, error } = await supabase
-        .from(TABLE)
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit);
+      let query = supabase.from(TABLE).select('*').order('created_at', { ascending: false }).limit(limit);
+      if (userEmail?.trim()) {
+        query = query.eq('user_email', userEmail.trim());
+      }
+      const { data, error } = await query;
       if (!error && data != null) return data.map(rowToEntry);
     }
-    return editHistoryStore.getAllEntries(limit);
+    return editHistoryStore.getAllEntries(limit, userEmail);
   } catch {
-    return editHistoryStore.getAllEntries(limit);
+    return editHistoryStore.getAllEntries(limit, userEmail);
+  }
+}
+
+export async function deleteEditHistory(options: { range: DeleteHistoryRange; userEmail?: string }): Promise<number> {
+  try {
+    const supabase = getSupabase();
+    if (supabase) {
+      const cutoff = getCutoffIso(options.range);
+      let query = supabase.from(TABLE).delete();
+      if (cutoff) query = query.gte('created_at', cutoff);
+      if (options.userEmail?.trim()) query = query.eq('user_email', options.userEmail.trim());
+      const { data, error } = await query.select('id');
+      if (error) throw error;
+      return Array.isArray(data) ? data.length : 0;
+    }
+    return editHistoryStore.deleteEntries({
+      range: options.range,
+      userEmail: options.userEmail,
+    });
+  } catch {
+    return editHistoryStore.deleteEntries({
+      range: options.range,
+      userEmail: options.userEmail,
+    });
   }
 }
