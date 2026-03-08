@@ -8,14 +8,21 @@ import type { Event } from '@/lib/event-types';
 import type { Role } from '@/lib/user-types';
 
 function formatLastEditedShort(ev: Event): string | null {
-  const at = ev.updatedAt || ev.createdAt;
-  if (!at) return null;
-  try {
-    const d = new Date(at);
-    return 'Modifié le ' + new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(d);
-  } catch {
-    return 'Modifié';
+  const at = ev.lastEditedAt || ev.updatedAt || ev.createdAt;
+  if (!at && !ev.lastEditedBy) return null;
+  const parts: string[] = [];
+  if (at) {
+    try {
+      const d = new Date(at);
+      parts.push('Modifié le ' + new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(d));
+    } catch {
+      parts.push('Modifié');
+    }
+  } else {
+    parts.push('Modifié');
   }
+  if (ev.lastEditedBy) parts.push('par ' + ev.lastEditedBy);
+  return parts.join(' ');
 }
 
 type SortOption = 'title-asc' | 'title-desc' | 'date-asc' | 'date-desc' | 'updated-desc' | 'updated-asc';

@@ -26,12 +26,16 @@ export async function POST(request: NextRequest) {
     const imageUrls = Array.isArray(body.imageUrls)
       ? body.imageUrls.filter((u): u is string => typeof u === 'string').map((u) => u.trim()).filter(Boolean)
       : undefined;
+    const now = new Date().toISOString();
+    const editorEmail = (token.email as string) ?? '';
     const event = await createEvent({
       title: body.title?.trim() || undefined,
       date: body.date?.trim() || undefined,
       place: body.place?.trim() || undefined,
       description: description || 'Sans description',
       imageUrls: imageUrls?.length ? imageUrls : undefined,
+      lastEditedAt: now,
+      lastEditedBy: editorEmail,
     });
     return NextResponse.json(event);
   } catch (e) {

@@ -30,6 +30,8 @@ export async function PUT(
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   const { id } = await params;
+  const now = new Date().toISOString();
+  const editorEmail = (token.email as string) ?? '';
   try {
     const body = (await request.json()) as { title?: string; date?: string; place?: string; description?: string; imageUrls?: string[] };
     const imageUrls = Array.isArray(body.imageUrls)
@@ -41,6 +43,8 @@ export async function PUT(
       place: body.place !== undefined ? (body.place?.trim() || undefined) : undefined,
       description: body.description !== undefined ? (body.description?.trim() ?? '') : undefined,
       imageUrls: imageUrls !== undefined ? (imageUrls.length ? imageUrls : []) : undefined,
+      lastEditedAt: now,
+      lastEditedBy: editorEmail,
     });
     if (!updated) {
       return NextResponse.json({ error: 'Introuvable' }, { status: 404 });

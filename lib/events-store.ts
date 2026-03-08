@@ -47,6 +47,8 @@ export function createEvent(input: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>
     id: crypto.randomUUID(),
     createdAt: now,
     updatedAt: now,
+    lastEditedAt: input.lastEditedAt ?? now,
+    lastEditedBy: input.lastEditedBy ?? undefined,
   };
   items.push(newEvent);
   writeEvents(items);
@@ -63,6 +65,8 @@ export function updateEvent(id: string, input: Partial<Omit<Event, 'id' | 'creat
     ...input,
     id,
     updatedAt: now,
+    lastEditedAt: input.lastEditedAt ?? items[index].lastEditedAt ?? now,
+    lastEditedBy: input.lastEditedBy !== undefined ? input.lastEditedBy : items[index].lastEditedBy,
   };
   writeEvents(items);
   return items[index];

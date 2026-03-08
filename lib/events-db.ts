@@ -18,6 +18,8 @@ function rowToEvent(row: Record<string, unknown>): Event {
     imageUrls: imageUrls.length ? imageUrls : undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    lastEditedAt: (row.last_edited_at as string) ?? undefined,
+    lastEditedBy: (row.last_edited_by as string)?.trim() || undefined,
   };
 }
 
@@ -75,6 +77,8 @@ export async function createEvent(
         image_urls: imageUrls.length ? imageUrls : null,
         created_at: now,
         updated_at: now,
+        last_edited_at: input.lastEditedAt ?? now,
+        last_edited_by: input.lastEditedBy?.trim() || null,
       };
       const { data, error } = await supabase.from(TABLE).insert(row).select().single();
       if (error) throw error;
@@ -93,8 +97,9 @@ export async function updateEvent(
   const supabase = getSupabase();
   if (supabase) {
     try {
+      const now = new Date().toISOString();
       const row: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
+        updated_at: now,
       };
       if (input.title !== undefined) row.title = input.title?.trim() || null;
       if (input.date !== undefined) row.date = input.date?.trim() || null;
@@ -107,6 +112,8 @@ export async function updateEvent(
         row.image_url = input.imageUrl ?? null;
         row.image_urls = input.imageUrl ? [input.imageUrl] : [];
       }
+      if (input.lastEditedAt !== undefined) row.last_edited_at = input.lastEditedAt;
+      if (input.lastEditedBy !== undefined) row.last_edited_by = input.lastEditedBy?.trim() || null;
       const { data, error } = await supabase
         .from(TABLE)
         .update(row)

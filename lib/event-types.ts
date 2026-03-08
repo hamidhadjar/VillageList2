@@ -8,6 +8,8 @@ export interface Event {
   imageUrls?: string[];
   createdAt: string;
   updatedAt: string;
+  lastEditedAt?: string;
+  lastEditedBy?: string;
 }
 
 export type EventInput = Omit<Event, 'id' | 'createdAt' | 'updatedAt'>;
