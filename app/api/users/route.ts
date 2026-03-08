@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getTokenSafe } from '@/lib/auth-token';
 import { getAllUsers, createUser, getUserByEmail } from '@/lib/users-db';
 import { logEditHistory } from '@/lib/edit-history-db';
 import { hashPassword } from '@/lib/auth';
 import type { Role } from '@/lib/user-types';
-import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 export async function GET(request: NextRequest) {
-  const token = await getToken({ req: request, secret: getNextAuthSecret() });
+  const token = await getTokenSafe(request);
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
@@ -24,7 +23,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const token = await getToken({ req: request, secret: getNextAuthSecret() });
+  const token = await getTokenSafe(request);
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }

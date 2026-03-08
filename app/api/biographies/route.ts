@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getTokenSafe } from '@/lib/auth-token';
 import { getAllBiographies, createBiography, getBiographyById, updateBiography } from '@/lib/db';
 import { logEditHistory } from '@/lib/edit-history-db';
 import { Biography, BiographyInput, getImageUrls, normalizeImageUrl } from '@/lib/types';
-import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 const EDIT_ROLES = ['edit', 'admin'];
 
@@ -21,7 +20,7 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const token = await getToken({ req: request, secret: getNextAuthSecret() });
+  const token = await getTokenSafe(request);
   if (!token || !EDIT_ROLES.includes(token.role as string)) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }

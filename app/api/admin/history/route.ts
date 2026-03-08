@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getTokenSafe } from '@/lib/auth-token';
 import { getAllEditHistory } from '@/lib/edit-history-db';
-import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 export async function GET(request: NextRequest) {
-  const token = await getToken({ req: request, secret: getNextAuthSecret() });
+  const token = await getTokenSafe(request);
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
