@@ -6,7 +6,7 @@ import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { normalizeImageUrl } from '@/lib/types';
 import type { Event } from '@/lib/event-types';
 import type { Role } from '@/lib/user-types';
-import { parseDateForInput } from '@/lib/date-input';
+import { parseDateForInput, formatDateDisplay } from '@/lib/date-input';
 
 function formatLastEditedShort(ev: Event): string | null {
   const at = ev.lastEditedAt || ev.updatedAt || ev.createdAt;
@@ -571,7 +571,7 @@ export default function EventsPage() {
                   <h2 className="gallery-title">{ev.title || 'Sans titre'}</h2>
                   {(ev.date || ev.place) && (
                     <p className="meta" style={{ marginTop: '0.25rem' }}>
-                      {ev.date && <span>{ev.date}</span>}
+                      {ev.date && <span>{formatDateDisplay(ev.date)}</span>}
                       {ev.date && ev.place && ' — '}
                       {ev.place && <span>{ev.place}</span>}
                     </p>
@@ -626,7 +626,7 @@ export default function EventsPage() {
                   )}
                   {(ev.date || ev.place) && (
                     <p className="meta" style={{ marginBottom: '0.35rem' }}>
-                      {ev.date && <span>{ev.date}</span>}
+                      {ev.date && <span>{formatDateDisplay(ev.date)}</span>}
                       {ev.date && ev.place && ' — '}
                       {ev.place && <span>{ev.place}</span>}
                     </p>

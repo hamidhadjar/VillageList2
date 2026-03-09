@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { Biography, getImageUrls } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
+import { formatDateDisplay } from '@/lib/date-input';
 
 type SortOption = 'name-asc' | 'name-desc' | 'death-asc' | 'death-desc' | 'updated-desc' | 'updated-asc';
 type ViewMode = 'list' | 'gallery';
@@ -314,9 +315,9 @@ export default function HomePage() {
                   {bio.title && <p className="bio-title">{bio.title}</p>}
                   {(bio.birthDate || bio.deathDate) && (
                     <p className="meta" style={{ marginTop: '0.25rem' }}>
-                      {bio.birthDate && <span>{bio.birthDate}</span>}
+                      {bio.birthDate && <span>{formatDateDisplay(bio.birthDate)}</span>}
                       {bio.birthDate && bio.deathDate && ' — '}
-                      {bio.deathDate && <span>{bio.deathDate}</span>}
+                      {bio.deathDate && <span>{formatDateDisplay(bio.deathDate)}</span>}
                     </p>
                   )}
                   {showLastEdited && lastEditedStr && (
@@ -392,9 +393,9 @@ export default function HomePage() {
                     {bio.title && <p className="bio-title">{bio.title}</p>}
                   {(bio.birthDate || bio.deathDate) && (
                     <p className="meta">
-                      {bio.birthDate && <span>{bio.birthDate}</span>}
+                      {bio.birthDate && <span>{formatDateDisplay(bio.birthDate)}</span>}
                       {bio.birthDate && bio.deathDate && ' — '}
-                      {bio.deathDate && <span>{bio.deathDate}</span>}
+                      {bio.deathDate && <span>{formatDateDisplay(bio.deathDate)}</span>}
                     </p>
                   )}
                   {showLastEdited && lastEditedStr && (

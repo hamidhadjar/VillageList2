@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { Biography, getImageUrls, type BiographyRelation } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
+import { formatDateDisplay } from '@/lib/date-input';
 
 const CAN_EDIT: Role[] = ['edit', 'admin'];
 
@@ -142,9 +143,9 @@ export default function ViewBioPage() {
         {bio.title && <p className="bio-view-title">{bio.title}</p>}
         {(bio.birthDate || bio.deathDate) && (
           <p className="meta bio-view-dates">
-            {bio.birthDate && <span>{bio.birthDate}</span>}
+            {bio.birthDate && <span>{formatDateDisplay(bio.birthDate)}</span>}
             {bio.birthDate && bio.deathDate && ' — '}
-            {bio.deathDate && <span>{bio.deathDate}</span>}
+            {bio.deathDate && <span>{formatDateDisplay(bio.deathDate)}</span>}
           </p>
         )}
         {bio.relations && (bio.relations.father || bio.relations.sons?.length || bio.relations.brothers?.length) && (

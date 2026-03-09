@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Biography } from '@/lib/types';
 import { getImageUrls } from '@/lib/types';
+import { formatDateDisplay } from '@/lib/date-input';
 
 const AVATAR_SIZE = 88;
 
@@ -26,7 +27,7 @@ function PersonCard({ bio }: { bio: Biography }) {
         {!firstImage && <div className="tree-gen-avatar-placeholder" />}
       </div>
       <span className="tree-gen-label">{bio.name}</span>
-      {bio.deathDate && <span className="tree-gen-meta">{bio.deathDate}</span>}
+      {bio.deathDate && <span className="tree-gen-meta">{formatDateDisplay(bio.deathDate)}</span>}
     </Link>
   );
 }
