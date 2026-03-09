@@ -6,6 +6,7 @@ import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { normalizeImageUrl } from '@/lib/types';
 import type { Event } from '@/lib/event-types';
 import type { Role } from '@/lib/user-types';
+import { parseDateForInput } from '@/lib/date-input';
 
 function formatLastEditedShort(ev: Event): string | null {
   const at = ev.lastEditedAt || ev.updatedAt || ev.createdAt;
@@ -481,9 +482,8 @@ export default function EventsPage() {
                 <label htmlFor="event-date">Date</label>
                 <input
                   id="event-date"
-                  type="text"
-                  placeholder="ex. 15 juin 1960"
-                  value={form.date}
+                  type="date"
+                  value={parseDateForInput(form.date)}
                   onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
                 />
               </div>

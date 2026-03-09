@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { normalizeImageUrl } from '@/lib/types';
 import type { Biography } from '@/lib/types';
+import { parseDateForInput } from '@/lib/date-input';
 import { SearchablePersonMultiSelect } from '@/app/components/SearchablePersonMultiSelect';
 
 export default function AddPage() {
@@ -186,10 +187,9 @@ export default function AddPage() {
             <input
               id="birthDate"
               name="birthDate"
-              type="text"
-              value={form.birthDate}
-              onChange={handleChange}
-              placeholder="ex. 1920"
+              type="date"
+              value={parseDateForInput(form.birthDate)}
+              onChange={(e) => setForm((p) => ({ ...p, birthDate: e.target.value }))}
             />
           </div>
           <div className="form-group">
@@ -197,10 +197,9 @@ export default function AddPage() {
             <input
               id="deathDate"
               name="deathDate"
-              type="text"
-              value={form.deathDate}
-              onChange={handleChange}
-              placeholder="ex. 1995"
+              type="date"
+              value={parseDateForInput(form.deathDate)}
+              onChange={(e) => setForm((p) => ({ ...p, deathDate: e.target.value }))}
             />
           </div>
         </div>
