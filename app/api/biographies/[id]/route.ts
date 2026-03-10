@@ -18,7 +18,7 @@ export async function GET(
     }
     const urls = getImageUrls(biography);
     const out: Record<string, unknown> = { ...biography, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] };
-    const relations: { father?: BiographyRelation; sons: BiographyRelation[]; brothers: BiographyRelation[] } = { sons: [], brothers: [] };
+    const relations: { father?: BiographyRelation; sons: BiographyRelation[]; brothers: BiographyRelation[]; spouse?: BiographyRelation } = { sons: [], brothers: [] };
     if (biography.fatherId) {
       const father = await getBiographyById(biography.fatherId);
       if (father) relations.father = { id: father.id, name: father.name };
@@ -30,6 +30,10 @@ export async function GET(
     for (const bid of biography.brotherIds ?? []) {
       const bro = await getBiographyById(bid);
       if (bro) relations.brothers.push({ id: bro.id, name: bro.name });
+    }
+    if (biography.spouseId) {
+      const spouse = await getBiographyById(biography.spouseId);
+      if (spouse) relations.spouse = { id: spouse.id, name: spouse.name };
     }
     out.relations = relations;
     return NextResponse.json(out);
@@ -69,11 +73,14 @@ export async function PUT(
     body.brotherIds !== undefined && Array.isArray(body.brotherIds)
       ? body.brotherIds.map((id) => (id != null ? String(id).trim() : '')).filter(Boolean)
       : undefined;
+  const spouseSent = body.spouseId !== undefined;
+  const newSpouseId = spouseSent ? (body.spouseId?.trim() || undefined) : undefined;
   const toId = (x: string | number | undefined | null): string => (x == null ? '' : String(x).trim());
   try {
-    const needExisting = fatherSent || sonIdsArr !== undefined;
+    const needExisting = fatherSent || sonIdsArr !== undefined || spouseSent;
     const existing = needExisting ? await getBiographyById(id) : null;
     const oldFatherId = existing?.fatherId != null ? toId(existing.fatherId) : undefined;
+    const oldSpouseId = existing?.spouseId != null ? toId(existing.spouseId) : undefined;
 
     const updated = await updateBiography(id, {
       name: body.name,
@@ -87,6 +94,7 @@ export async function PUT(
       fatherId: fatherSent ? (newFatherId ?? '') : undefined,
       sonIds: sonIdsArr,
       brotherIds: brotherIdsArr,
+      spouseId: spouseSent ? (newSpouseId ?? '') : undefined,
       lastEditedAt: now,
       lastEditedBy: editorEmail,
     });
@@ -125,6 +133,18 @@ export async function PUT(
         }
       }
     }
+    // Auto sync spouse ↔ spouse: when this bio's spouseId changes, update old/new spouse's spouse_id
+    if (oldSpouseId !== (newSpouseId ?? '')) {
+      if (oldSpouseId) {
+        const oldSpouse = await getBiographyById(oldSpouseId);
+        if (oldSpouse && toId(oldSpouse.spouseId) === myIdNorm) {
+          await updateBiography(oldSpouseId, { spouseId: '' });
+        }
+      }
+      if (newSpouseId) {
+        await updateBiography(newSpouseId, { spouseId: myIdNorm });
+      }
+    }
     logEditHistory({
       userEmail: editorEmail,
       userRole: (token.role as string) ?? undefined,
@@ -138,9 +158,9 @@ export async function PUT(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('PUT /api/biographies/[id] error:', e);
-    if (msg.includes('father_id') || msg.includes('son_ids') || msg.includes('brother_ids') || msg.includes('does not exist')) {
+    if (msg.includes('father_id') || msg.includes('son_ids') || msg.includes('brother_ids') || msg.includes('spouse_id') || msg.includes('does not exist')) {
       return NextResponse.json(
-        { error: 'Les champs de lien familial (père, fils, frères) ne sont pas encore disponibles. Exécutez la migration Supabase : docs/supabase-migration-relationships.sql' },
+        { error: 'Les champs de lien familial (père, fils, frères, conjoint) ne sont pas encore disponibles. Exécutez les migrations Supabase : docs/supabase-migration-relationships.sql et docs/supabase-migration-spouse.sql' },
         { status: 500 }
       );
     }

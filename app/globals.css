@@ -788,6 +788,31 @@ input, textarea {
   align-items: center;
 }
 
+.tree-gen-couple-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+/* Pink line between spouses: aligned with center of 88px avatar, touching both circles */
+.tree-gen-spouse-connector {
+  /* Span from right edge of first circle to left edge of second (avatars 88px centered in card) */
+  width: 72px;
+  min-width: 72px;
+  height: 3px;
+  background: #d46a8a;
+  flex-shrink: 0;
+  border-radius: 2px;
+  /* Center line with avatar (88px): 44px - 1.5px = 42.5px from top */
+  margin-top: 42.5px;
+  /* Pull line into both cards so it touches both circular pictures */
+  margin-left: -16px;
+  margin-right: -16px;
+}
+
 .tree-gen-person {
   display: flex;
   flex-direction: column;
@@ -861,7 +886,7 @@ input, textarea {
   color: var(--accent);
 }
 
-/* Connector: vertical line down from person to children row */
+/* Vertical line from father straight down to horizontal line (perpendicular) */
 .tree-gen-connector-down {
   width: 2px;
   height: 24px;
@@ -870,7 +895,7 @@ input, textarea {
   flex-shrink: 0;
 }
 
-/* Horizontal row of children with branches */
+/* Horizontal row of children – only as wide as the sons (no extra width) */
 .tree-gen-children-row {
   display: flex;
   flex-direction: row;
@@ -879,21 +904,26 @@ input, textarea {
   gap: 2rem;
   padding-top: 0;
   position: relative;
+  /* Row width = content only, so horizontal line does not exceed sons */
+  width: max-content;
+  max-width: 100%;
 }
 
+/* Horizontal line only between first and last son – perpendicular to vertical drop from father */
 .tree-gen-children-row::before {
   content: '';
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 88px);
-  max-width: 400px;
+  /* Span from center of first branch to center of last – use full row content width */
+  width: 100%;
   height: 2px;
   background: var(--border);
+  pointer-events: none;
 }
 
-/* Each branch: vertical line then person */
+/* Each branch: vertical line straight down to son (perpendicular to horizontal) */
 .tree-gen-branch {
   display: flex;
   flex-direction: column;

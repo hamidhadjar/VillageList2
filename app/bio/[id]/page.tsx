@@ -148,11 +148,16 @@ export default function ViewBioPage() {
             {bio.deathDate && <span>{formatDateDisplay(bio.deathDate)}</span>}
           </p>
         )}
-        {bio.relations && (bio.relations.father || bio.relations.sons?.length || bio.relations.brothers?.length) && (
+        {bio.relations && (bio.relations.father || bio.relations.sons?.length || bio.relations.brothers?.length || bio.relations.spouse) && (
           <div className="bio-view-relations" style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
             {bio.relations.father && (
               <p className="meta">
                 Père : <Link href={`/bio/${bio.relations.father.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{bio.relations.father.name}</Link>
+              </p>
+            )}
+            {bio.relations.spouse && (
+              <p className="meta">
+                Conjoint(e) : <Link href={`/bio/${bio.relations.spouse.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{bio.relations.spouse.name}</Link>
               </p>
             )}
             {bio.relations.sons && bio.relations.sons.length > 0 && (

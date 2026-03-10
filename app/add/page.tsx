@@ -22,6 +22,7 @@ export default function AddPage() {
     fullBio: '',
   });
   const [fatherId, setFatherId] = useState('');
+  const [spouseId, setSpouseId] = useState('');
   const [sonIds, setSonIds] = useState<string[]>([]);
   const [brotherIds, setBrotherIds] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -101,6 +102,7 @@ export default function AddPage() {
           fullBio: form.fullBio.trim(),
           imageUrls: imageUrls.length ? imageUrls : undefined,
           fatherId: fatherId.trim() || undefined,
+          spouseId: spouseId.trim() || undefined,
           sonIds: sonIds.length ? sonIds : undefined,
           brotherIds: brotherIds.length ? brotherIds : undefined,
         }),
@@ -232,6 +234,20 @@ export default function AddPage() {
             id="fatherId"
             value={fatherId}
             onChange={(e) => setFatherId(e.target.value)}
+            className="sort-select"
+          >
+            <option value="">— Aucun —</option>
+            {allBiographies.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="spouseId">Conjoint(e)</label>
+          <select
+            id="spouseId"
+            value={spouseId}
+            onChange={(e) => setSpouseId(e.target.value)}
             className="sort-select"
           >
             <option value="">— Aucun —</option>

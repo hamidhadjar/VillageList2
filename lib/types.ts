@@ -15,6 +15,8 @@ export interface Biography {
   sonIds?: string[];
   /** IDs of brothers' biographies. */
   brotherIds?: string[];
+  /** ID of the spouse's biography (husband or wife). */
+  spouseId?: string;
   createdAt: string;
   updatedAt: string;
   lastEditedAt?: string;

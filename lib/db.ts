@@ -28,6 +28,7 @@ function rowToBio(row: Record<string, unknown>): Biography {
     fatherId: toStr(row.father_id) || undefined,
     sonIds: sonIds.length ? sonIds : undefined,
     brotherIds: brotherIds.length ? brotherIds : undefined,
+    spouseId: toStr(row.spouse_id) || undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     lastEditedAt: (row.last_edited_at as string) ?? undefined,
@@ -80,6 +81,7 @@ export async function createBiography(
       father_id: input.fatherId ?? null,
       son_ids: input.sonIds?.length ? input.sonIds : null,
       brother_ids: input.brotherIds?.length ? input.brotherIds : null,
+      spouse_id: input.spouseId?.trim() || null,
     };
     if (imageUrls.length) row.image_urls = imageUrls;
     const { data, error } = await supabase.from(TABLE).insert(row).select().single();
@@ -112,6 +114,7 @@ export async function updateBiography(
     if (input.fatherId !== undefined) row.father_id = input.fatherId?.trim() || null;
     if (input.sonIds !== undefined) row.son_ids = input.sonIds?.length ? input.sonIds : [];
     if (input.brotherIds !== undefined) row.brother_ids = input.brotherIds?.length ? input.brotherIds : [];
+    if (input.spouseId !== undefined) row.spouse_id = input.spouseId?.trim() || null;
     const now = new Date().toISOString();
     row.updated_at = now;
     if (input.lastEditedAt !== undefined) row.last_edited_at = input.lastEditedAt;

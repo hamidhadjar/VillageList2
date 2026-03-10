@@ -25,6 +25,7 @@ export default function EditPage() {
     fullBio: '',
   });
   const [fatherId, setFatherId] = useState('');
+  const [spouseId, setSpouseId] = useState('');
   const [sonIds, setSonIds] = useState<string[]>([]);
   const [brotherIds, setBrotherIds] = useState<string[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -56,6 +57,7 @@ export default function EditPage() {
           fullBio: data.fullBio ?? '',
         });
         setFatherId(data.fatherId ?? '');
+        setSpouseId(data.spouseId ?? '');
         setSonIds(Array.isArray(data.sonIds) ? data.sonIds : []);
         setBrotherIds(Array.isArray(data.brotherIds) ? data.brotherIds : []);
       }
@@ -134,6 +136,7 @@ export default function EditPage() {
           fullBio: form.fullBio.trim(),
           imageUrls: finalImageUrls,
           fatherId: fatherId.trim() || undefined,
+          spouseId: spouseId.trim() || undefined,
           sonIds,
           brotherIds,
         }),
@@ -307,6 +310,20 @@ export default function EditPage() {
             id="fatherId"
             value={fatherId}
             onChange={(e) => setFatherId(e.target.value)}
+            className="sort-select"
+          >
+            <option value="">— Aucun —</option>
+            {allBiographies.filter((b) => b.id !== id).map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="spouseId">Conjoint(e)</label>
+          <select
+            id="spouseId"
+            value={spouseId}
+            onChange={(e) => setSpouseId(e.target.value)}
             className="sort-select"
           >
             <option value="">— Aucun —</option>

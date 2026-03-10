@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = (await request.json()) as BiographyInput;
-    const { name, summary, fullBio, birthDate, deathDate, title, imageUrl, imageUrls, fatherId, sonIds, brotherIds } = body;
+    const { name, summary, fullBio, birthDate, deathDate, title, imageUrl, imageUrls, fatherId, sonIds, brotherIds, spouseId } = body;
     if (!name?.trim() || !summary?.trim() || !fullBio?.trim()) {
       return NextResponse.json(
         { error: 'Le nom, le résumé et la biographie complète sont obligatoires.' },
@@ -50,7 +50,13 @@ export async function POST(request: NextRequest) {
       fatherId: fatherId?.trim() || undefined,
       sonIds: sonIdsArr?.length ? sonIdsArr : undefined,
       brotherIds: brotherIdsArr?.length ? brotherIdsArr : undefined,
+      spouseId: spouseId?.trim() || undefined,
     });
+    // Auto link spouse ↔ spouse
+    const sid = spouseId?.trim();
+    if (sid && biography.id) {
+      await updateBiography(sid, { spouseId: biography.id });
+    }
     // Auto link father → son: add this biography to the father's son_ids
     const fid = fatherId?.trim();
     if (fid && biography.id) {

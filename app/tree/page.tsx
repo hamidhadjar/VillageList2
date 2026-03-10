@@ -36,6 +36,20 @@ function normId(b: Biography): string {
   return (b.id != null ? String(b.id) : '').trim();
 }
 
+/** Person card with optional spouse side by side. */
+function PersonWithSpouse({ bio, map }: { bio: Biography; map: Map<string, Biography> }) {
+  const spouseId = bio.spouseId != null ? String(bio.spouseId).trim() : '';
+  const spouse = spouseId ? map.get(spouseId) : null;
+  if (!spouse) return <PersonCard bio={bio} />;
+  return (
+    <div className="tree-gen-couple-row">
+      <PersonCard bio={bio} />
+      <div className="tree-gen-spouse-connector" aria-hidden="true" />
+      <PersonCard bio={spouse} />
+    </div>
+  );
+}
+
 /** One person in the tree (card only) and below them their sons as a single row of siblings. No duplicate "brothers" row - brothers are the other children in the same row. */
 function TreePersonCell({ bio, map, childrenMap }: { bio: Biography; map: Map<string, Biography>; childrenMap: Map<string, Biography[]> }) {
   const sons = childrenMap.get(normId(bio)) ?? []; // normId so numeric ids from API match map keys
@@ -44,7 +58,7 @@ function TreePersonCell({ bio, map, childrenMap }: { bio: Biography; map: Map<st
     <div className="tree-gen-branch">
       <div className="tree-gen-connector-vert" aria-hidden="true" />
       <div className="tree-gen-node">
-        <PersonCard bio={bio} />
+        <PersonWithSpouse bio={bio} map={map} />
         {sons.length > 0 && (
           <>
             <div className="tree-gen-connector-down" aria-hidden="true" />
@@ -75,7 +89,7 @@ function TreeRoot({ bio, map, childrenMap }: { bio: Biography; map: Map<string, 
           <div className="tree-gen-siblings-row">
             <div className="tree-gen-self-cell">
               <div className="tree-gen-connector-vert" aria-hidden="true" />
-              <PersonCard bio={bio} />
+              <PersonWithSpouse bio={bio} map={map} />
               {sons.length > 0 && (
                 <>
                   <div className="tree-gen-connector-down" aria-hidden="true" />
@@ -97,7 +111,7 @@ function TreeRoot({ bio, map, childrenMap }: { bio: Biography; map: Map<string, 
         </div>
       ) : (
         <>
-          <PersonCard bio={bio} />
+          <PersonWithSpouse bio={bio} map={map} />
           {sons.length > 0 && (
             <>
               <div className="tree-gen-connector-down" aria-hidden="true" />
