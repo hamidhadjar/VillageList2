@@ -34,7 +34,7 @@ export default function ViewBioPage() {
 
   const params = useParams();
   const id = params.id as string;
-  const [bio, setBio] = useState<(Biography & { relations?: { father?: BiographyRelation; sons: BiographyRelation[]; brothers: BiographyRelation[] } }) | null>(null);
+  const [bio, setBio] = useState<(Biography & { relations?: { father?: BiographyRelation; sons: BiographyRelation[]; brothers: BiographyRelation[]; spouse?: BiographyRelation } }) | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
