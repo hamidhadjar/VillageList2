@@ -20,6 +20,7 @@ function rowToBio(row: Record<string, unknown>): Biography {
     name: row.name as string,
     title: (row.title as string) ?? undefined,
     birthDate: (row.birth_date as string) ?? undefined,
+    birthPlace: (row.birth_place as string) ?? undefined,
     deathDate: (row.death_date as string) ?? undefined,
     summary: row.summary as string,
     fullBio: row.full_bio as string,
@@ -29,6 +30,9 @@ function rowToBio(row: Record<string, unknown>): Biography {
     sonIds: sonIds.length ? sonIds : undefined,
     brotherIds: brotherIds.length ? brotherIds : undefined,
     spouseId: toStr(row.spouse_id) || undefined,
+    deathPlace: (row.death_place as string) ?? undefined,
+    deathLat: row.death_lat != null ? Number(row.death_lat) : undefined,
+    deathLng: row.death_lng != null ? Number(row.death_lng) : undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     lastEditedAt: (row.last_edited_at as string) ?? undefined,
@@ -74,6 +78,7 @@ export async function createBiography(
       name: input.name,
       title: input.title ?? null,
       birth_date: input.birthDate ?? null,
+      birth_place: input.birthPlace?.trim() || null,
       death_date: input.deathDate ?? null,
       summary: input.summary,
       full_bio: input.fullBio,
@@ -82,6 +87,9 @@ export async function createBiography(
       son_ids: input.sonIds?.length ? input.sonIds : null,
       brother_ids: input.brotherIds?.length ? input.brotherIds : null,
       spouse_id: input.spouseId?.trim() || null,
+      death_place: input.deathPlace?.trim() || null,
+      death_lat: input.deathLat != null ? input.deathLat : null,
+      death_lng: input.deathLng != null ? input.deathLng : null,
     };
     if (imageUrls.length) row.image_urls = imageUrls;
     const { data, error } = await supabase.from(TABLE).insert(row).select().single();
@@ -101,6 +109,7 @@ export async function updateBiography(
     if (input.name !== undefined) row.name = input.name;
     if (input.title !== undefined) row.title = input.title;
     if (input.birthDate !== undefined) row.birth_date = input.birthDate;
+    if (input.birthPlace !== undefined) row.birth_place = input.birthPlace?.trim() || null;
     if (input.deathDate !== undefined) row.death_date = input.deathDate;
     if (input.summary !== undefined) row.summary = input.summary;
     if (input.fullBio !== undefined) row.full_bio = input.fullBio;
@@ -115,6 +124,9 @@ export async function updateBiography(
     if (input.sonIds !== undefined) row.son_ids = input.sonIds?.length ? input.sonIds : [];
     if (input.brotherIds !== undefined) row.brother_ids = input.brotherIds?.length ? input.brotherIds : [];
     if (input.spouseId !== undefined) row.spouse_id = input.spouseId?.trim() || null;
+    if (input.deathPlace !== undefined) row.death_place = input.deathPlace?.trim() || null;
+    if (input.deathLat !== undefined) row.death_lat = input.deathLat != null ? input.deathLat : null;
+    if (input.deathLng !== undefined) row.death_lng = input.deathLng != null ? input.deathLng : null;
     const now = new Date().toISOString();
     row.updated_at = now;
     if (input.lastEditedAt !== undefined) row.last_edited_at = input.lastEditedAt;

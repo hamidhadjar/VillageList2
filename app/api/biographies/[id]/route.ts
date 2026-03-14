@@ -87,6 +87,7 @@ export async function PUT(
       summary: body.summary,
       fullBio: body.fullBio,
       birthDate: body.birthDate,
+      birthPlace: body.birthPlace !== undefined ? (body.birthPlace?.trim() || undefined) : undefined,
       deathDate: body.deathDate,
       title: body.title,
       imageUrl: urls !== undefined ? urls[0] : body.imageUrl,
@@ -95,6 +96,9 @@ export async function PUT(
       sonIds: sonIdsArr,
       brotherIds: brotherIdsArr,
       spouseId: spouseSent ? (newSpouseId ?? '') : undefined,
+      deathPlace: body.deathPlace !== undefined ? (body.deathPlace?.trim() || undefined) : undefined,
+      deathLat: body.deathLat !== undefined ? (body.deathLat != null ? Number(body.deathLat) : undefined) : undefined,
+      deathLng: body.deathLng !== undefined ? (body.deathLng != null ? Number(body.deathLng) : undefined) : undefined,
       lastEditedAt: now,
       lastEditedBy: editorEmail,
     });

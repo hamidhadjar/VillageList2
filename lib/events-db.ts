@@ -13,6 +13,8 @@ function rowToEvent(row: Record<string, unknown>): Event {
     title: (row.title as string)?.trim() || undefined,
     date: (row.date as string)?.trim() || undefined,
     place: (row.place as string)?.trim() || undefined,
+    eventLat: row.event_lat != null ? Number(row.event_lat) : undefined,
+    eventLng: row.event_lng != null ? Number(row.event_lng) : undefined,
     description: (row.description as string) ?? '',
     imageUrl: imageUrls[0],
     imageUrls: imageUrls.length ? imageUrls : undefined,
@@ -72,6 +74,8 @@ export async function createEvent(
         title: input.title?.trim() || null,
         date: input.date?.trim() || null,
         place: input.place?.trim() || null,
+        event_lat: input.eventLat != null ? input.eventLat : null,
+        event_lng: input.eventLng != null ? input.eventLng : null,
         description: input.description?.trim() ?? '',
         image_url: imageUrls[0] ?? null,
         image_urls: imageUrls.length ? imageUrls : null,
@@ -104,6 +108,8 @@ export async function updateEvent(
       if (input.title !== undefined) row.title = input.title?.trim() || null;
       if (input.date !== undefined) row.date = input.date?.trim() || null;
       if (input.place !== undefined) row.place = input.place?.trim() || null;
+      if (input.eventLat !== undefined) row.event_lat = input.eventLat != null ? input.eventLat : null;
+      if (input.eventLng !== undefined) row.event_lng = input.eventLng != null ? input.eventLng : null;
       if (input.description !== undefined) row.description = input.description?.trim() ?? '';
       if (input.imageUrls !== undefined) {
         row.image_urls = input.imageUrls?.length ? input.imageUrls : [];

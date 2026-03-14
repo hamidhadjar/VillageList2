@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
       title: body.title?.trim() || undefined,
       date: body.date?.trim() || undefined,
       place: body.place?.trim() || undefined,
+      eventLat: body.eventLat != null ? Number(body.eventLat) : undefined,
+      eventLng: body.eventLng != null ? Number(body.eventLng) : undefined,
       description: description || 'Sans description',
       imageUrls: imageUrls?.length ? imageUrls : undefined,
       lastEditedAt: now,

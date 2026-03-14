@@ -7,6 +7,7 @@ import { normalizeImageUrl } from '@/lib/types';
 import type { Biography } from '@/lib/types';
 import { parseDateForInput } from '@/lib/date-input';
 import { SearchablePersonMultiSelect } from '@/app/components/SearchablePersonMultiSelect';
+import { MapPickerModal } from '@/app/components/MapPickerModal';
 
 export default function AddPage() {
   const router = useRouter();
@@ -21,6 +22,11 @@ export default function AddPage() {
     summary: '',
     fullBio: '',
   });
+  const [birthPlace, setBirthPlace] = useState('');
+  const [deathPlace, setDeathPlace] = useState('');
+  const [deathLat, setDeathLat] = useState('');
+  const [deathLng, setDeathLng] = useState('');
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [fatherId, setFatherId] = useState('');
   const [spouseId, setSpouseId] = useState('');
   const [sonIds, setSonIds] = useState<string[]>([]);
@@ -97,6 +103,7 @@ export default function AddPage() {
           name: form.name.trim(),
           title: form.title.trim() || undefined,
           birthDate: form.birthDate.trim() || undefined,
+          birthPlace: birthPlace.trim() || undefined,
           deathDate: form.deathDate.trim() || undefined,
           summary: form.summary.trim(),
           fullBio: form.fullBio.trim(),
@@ -105,6 +112,9 @@ export default function AddPage() {
           spouseId: spouseId.trim() || undefined,
           sonIds: sonIds.length ? sonIds : undefined,
           brotherIds: brotherIds.length ? brotherIds : undefined,
+          deathPlace: deathPlace.trim() || undefined,
+          deathLat: deathLat.trim() ? parseFloat(deathLat) : undefined,
+          deathLng: deathLng.trim() ? parseFloat(deathLng) : undefined,
         }),
       });
       const data = await res.json();
@@ -205,6 +215,48 @@ export default function AddPage() {
             />
           </div>
         </div>
+        <div className="form-group">
+          <label htmlFor="birthPlace">Lieu de naissance</label>
+          <input
+            id="birthPlace"
+            name="birthPlace"
+            type="text"
+            value={birthPlace}
+            onChange={(e) => setBirthPlace(e.target.value)}
+            placeholder="ex. Alger, Tizi Ouzou"
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="deathPlace">Lieu de décès</label>
+          <input
+            id="deathPlace"
+            name="deathPlace"
+            type="text"
+            value={deathPlace}
+            onChange={(e) => setDeathPlace(e.target.value)}
+            placeholder="ex. Alger, Hôpital Mustapha"
+          />
+        </div>
+        <div className="form-group">
+          <span className="meta" style={{ display: 'block', marginBottom: '0.35rem' }}>Lieu de décès (GPS)</span>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setShowMapPicker(true)}
+          >
+            Choisir sur la carte
+          </button>
+        </div>
+        <MapPickerModal
+          open={showMapPicker}
+          onClose={() => setShowMapPicker(false)}
+          lat={deathLat}
+          lng={deathLng}
+          onSelect={(lat, lng) => {
+            setDeathLat(String(lat));
+            setDeathLng(String(lng));
+          }}
+        />
         <div className="form-group">
           <label htmlFor="summary">Résumé *</label>
           <textarea

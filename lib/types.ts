@@ -2,6 +2,8 @@ export interface Biography {
   id: string;
   name: string;
   birthDate?: string;
+  /** Place name where the person was born (e.g. city, village). */
+  birthPlace?: string;
   deathDate?: string;
   title?: string;
   summary: string;
@@ -17,6 +19,12 @@ export interface Biography {
   brotherIds?: string[];
   /** ID of the spouse's biography (husband or wife). */
   spouseId?: string;
+  /** Place name where the person died (e.g. city, hospital). */
+  deathPlace?: string;
+  /** GPS latitude where the person died (for map). */
+  deathLat?: number;
+  /** GPS longitude where the person died (for map). */
+  deathLng?: number;
   createdAt: string;
   updatedAt: string;
   lastEditedAt?: string;

@@ -148,6 +148,12 @@ export default function ViewBioPage() {
             {bio.deathDate && <span>{formatDateDisplay(bio.deathDate)}</span>}
           </p>
         )}
+        {bio.birthPlace && (
+          <p className="meta bio-view-birth-place">Lieu de naissance : {bio.birthPlace}</p>
+        )}
+        {bio.deathPlace && (
+          <p className="meta bio-view-death-place">Lieu de décès : {bio.deathPlace}</p>
+        )}
         {bio.relations && (bio.relations.father || bio.relations.sons?.length || bio.relations.brothers?.length || bio.relations.spouse) && (
           <div className="bio-view-relations" style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
             {bio.relations.father && (

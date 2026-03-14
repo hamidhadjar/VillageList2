@@ -34,6 +34,8 @@ export function Nav() {
   const isHome = pathname === '/';
   const isTree = pathname.startsWith('/tree');
   const isStats = pathname.startsWith('/stats');
+  const isMap = pathname.startsWith('/map');
+  const isAsk = pathname.startsWith('/ask');
   const isEvents = pathname.startsWith('/events');
   const isUsers = pathname.startsWith('/admin/users');
   const isHistory = pathname.startsWith('/admin/history');
@@ -94,6 +96,12 @@ export function Nav() {
           </NavLink>
           <NavLink href="/stats" active={isStats}>
             Statistiques
+          </NavLink>
+          <NavLink href="/map" active={isMap}>
+            Carte
+          </NavLink>
+          <NavLink href="/ask" active={isAsk}>
+            Questions
           </NavLink>
           {role === 'admin' && (
             <>

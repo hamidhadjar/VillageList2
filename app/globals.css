@@ -1129,3 +1129,18 @@ input, textarea {
     padding: 0.65rem 0.75rem;
   }
 }
+
+/* Carte: layers control below fullscreen button (avoid overlap) */
+.map-carte-layers-below-button.leaflet-container .leaflet-top.leaflet-right {
+  top: 3.25rem;
+}
+
+/* Carte: selected biography marker (red) */
+.marker-selected-red.leaflet-marker-icon {
+  width: 24px;
+  height: 24px;
+  background: #c33;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}

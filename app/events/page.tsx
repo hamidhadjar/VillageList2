@@ -7,6 +7,7 @@ import { normalizeImageUrl } from '@/lib/types';
 import type { Event } from '@/lib/event-types';
 import type { Role } from '@/lib/user-types';
 import { parseDateForInput, formatDateDisplay } from '@/lib/date-input';
+import { MapPickerModal } from '@/app/components/MapPickerModal';
 
 function formatLastEditedShort(ev: Event): string | null {
   const at = ev.lastEditedAt || ev.updatedAt || ev.createdAt;
@@ -47,6 +48,9 @@ export default function EventsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('gallery'); // gallery is the default; list/gallery preference is persisted in localStorage
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', date: '', place: '', description: '', imageUrls: [] as string[] });
+  const [eventLat, setEventLat] = useState('');
+  const [eventLng, setEventLng] = useState('');
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -142,6 +146,8 @@ export default function EventsPage() {
           title: form.title.trim() || undefined,
           date: form.date.trim() || undefined,
           place: form.place.trim() || undefined,
+          eventLat: eventLat.trim() ? parseFloat(eventLat) : undefined,
+          eventLng: eventLng.trim() ? parseFloat(eventLng) : undefined,
           description: form.description.trim() || 'Sans description',
           imageUrls: allUrls.length ? allUrls : undefined,
         }),
@@ -153,6 +159,8 @@ export default function EventsPage() {
         return;
       }
       setForm({ title: '', date: '', place: '', description: '', imageUrls: [] });
+      setEventLat('');
+      setEventLng('');
       setPendingFiles([]);
       pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
       setPendingPreviews([]);
@@ -179,6 +187,8 @@ export default function EventsPage() {
           title: form.title.trim() || undefined,
           date: form.date.trim() || undefined,
           place: form.place.trim() || undefined,
+          eventLat: eventLat.trim() ? parseFloat(eventLat) : undefined,
+          eventLng: eventLng.trim() ? parseFloat(eventLng) : undefined,
           description: form.description.trim() || '',
           imageUrls: allUrls,
         }),
@@ -192,6 +202,8 @@ export default function EventsPage() {
       setEvents((prev) => prev.map((ev) => (ev.id === editingId ? data : ev)));
       setEditingId(null);
       setForm({ title: '', date: '', place: '', description: '', imageUrls: [] });
+      setEventLat('');
+      setEventLng('');
       setPendingFiles([]);
       pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
       setPendingPreviews([]);
@@ -212,6 +224,8 @@ export default function EventsPage() {
       description: ev.description ?? '',
       imageUrls: ev.imageUrls ?? [],
     });
+    setEventLat(ev.eventLat != null ? String(ev.eventLat) : '');
+    setEventLng(ev.eventLng != null ? String(ev.eventLng) : '');
     setPendingFiles([]);
     pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
     setPendingPreviews([]);
@@ -222,6 +236,8 @@ export default function EventsPage() {
     setEditingId(null);
     setShowAddForm(false);
     setForm({ title: '', date: '', place: '', description: '', imageUrls: [] });
+    setEventLat('');
+    setEventLng('');
     setPendingFiles([]);
     pendingPreviews.forEach((u) => URL.revokeObjectURL(u));
     setPendingPreviews([]);
@@ -498,6 +514,19 @@ export default function EventsPage() {
                 />
               </div>
             </div>
+            <div className="form-group">
+              <span className="meta" style={{ display: 'block', marginBottom: '0.35rem' }}>Lieu sur la carte (GPS)</span>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowMapPicker(true)}>
+                Choisir sur la carte
+              </button>
+            </div>
+            <MapPickerModal
+              open={showMapPicker}
+              onClose={() => setShowMapPicker(false)}
+              lat={eventLat}
+              lng={eventLng}
+              onSelect={(lat, lng) => { setEventLat(String(lat)); setEventLng(String(lng)); }}
+            />
             <div className="form-group">
               <label htmlFor="event-desc">Description *</label>
               <textarea

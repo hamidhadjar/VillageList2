@@ -33,7 +33,7 @@ export async function PUT(
   const now = new Date().toISOString();
   const editorEmail = (token.email as string) ?? '';
   try {
-    const body = (await request.json()) as { title?: string; date?: string; place?: string; description?: string; imageUrls?: string[] };
+    const body = (await request.json()) as { title?: string; date?: string; place?: string; description?: string; imageUrls?: string[]; eventLat?: number; eventLng?: number };
     const imageUrls = Array.isArray(body.imageUrls)
       ? body.imageUrls.filter((u): u is string => typeof u === 'string').map((u) => u.trim()).filter(Boolean)
       : undefined;
@@ -41,6 +41,8 @@ export async function PUT(
       title: body.title !== undefined ? (body.title?.trim() || undefined) : undefined,
       date: body.date !== undefined ? (body.date?.trim() || undefined) : undefined,
       place: body.place !== undefined ? (body.place?.trim() || undefined) : undefined,
+      eventLat: body.eventLat !== undefined ? (body.eventLat != null ? Number(body.eventLat) : undefined) : undefined,
+      eventLng: body.eventLng !== undefined ? (body.eventLng != null ? Number(body.eventLng) : undefined) : undefined,
       description: body.description !== undefined ? (body.description?.trim() ?? '') : undefined,
       imageUrls: imageUrls !== undefined ? (imageUrls.length ? imageUrls : []) : undefined,
       lastEditedAt: now,
