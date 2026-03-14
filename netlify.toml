@@ -1,0 +1,6 @@
+# Next.js on Netlify – plugin handles build output and runtime
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

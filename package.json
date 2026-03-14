@@ -5,19 +5,30 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "next lint",
-    "create-first-admin": "node scripts/create-first-admin.mjs"
+    "create-first-admin": "node scripts/create-first-admin.mjs",
+    "seed-supabase": "node scripts/seed-biographies-to-supabase.mjs",
+    "seed-users-supabase": "node scripts/seed-users-to-supabase.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
+    "@types/leaflet": "^1.9.21",
+    "@vercel/analytics": "^1.6.1",
     "bcryptjs": "^2.4.3",
+    "docx": "^9.6.0",
+    "jspdf": "^4.2.0",
+    "leaflet": "^1.9.4",
     "next": "^14.2.0",
     "next-auth": "^4.24.5",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^3.8.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.10.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",

@@ -1,29 +1,29 @@
-import { NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { getUserById, updateUser, deleteUser, getUserByEmail } from '@/lib/users-store';
+import { NextRequest, NextResponse } from 'next/server';
+import { getTokenSafe } from '@/lib/auth-token';
+import { getUserById, updateUser, deleteUser, getUserByEmail } from '@/lib/users-db';
+import { logEditHistory } from '@/lib/edit-history-db';
 import { hashPassword } from '@/lib/auth';
 import type { Role } from '@/lib/user-types';
-import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+  const token = await getTokenSafe(request);
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   const { id } = await params;
-  const user = getUserById(id);
+  const user = await getUserById(id);
   if (!user) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
   return NextResponse.json(user);
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+  const token = await getTokenSafe(request);
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
@@ -33,7 +33,7 @@ export async function PUT(
   const updates: { email?: string; role?: Role; passwordHash?: string } = {};
   if (email !== undefined) {
     const normalizedEmail = email.trim().toLowerCase();
-    const existing = getUserByEmail(normalizedEmail);
+    const existing = await getUserByEmail(normalizedEmail);
     if (existing && existing.id !== id) {
       return NextResponse.json({ error: 'Un utilisateur avec cet email existe déjà.' }, { status: 400 });
     }
@@ -48,16 +48,35 @@ export async function PUT(
   if (password !== undefined && password.trim()) {
     updates.passwordHash = await hashPassword(password.trim());
   }
-  const user = updateUser(id, updates);
-  if (!user) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
-  return NextResponse.json(user);
+  try {
+    const user = await updateUser(id, updates);
+    if (!user) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    logEditHistory({
+      userEmail: (token.email as string) ?? '',
+      userRole: (token.role as string) ?? undefined,
+      action: 'update',
+      entityType: 'user',
+      entityId: id,
+      entityLabel: user.email,
+    });
+    return NextResponse.json(user);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('read-only') || msg.includes('EROFS') || msg.includes('EACCES')) {
+      return NextResponse.json(
+        { error: 'La gestion des utilisateurs est en lecture seule sur ce déploiement (ex. Netlify).' },
+        { status: 503 }
+      );
+    }
+    throw e;
+  }
 }
 
 export async function DELETE(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+  const token = await getTokenSafe(request);
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
@@ -65,7 +84,27 @@ export async function DELETE(
   if (id === token.id) {
     return NextResponse.json({ error: 'Vous ne pouvez pas supprimer votre propre compte.' }, { status: 400 });
   }
-  const ok = deleteUser(id);
-  if (!ok) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
-  return NextResponse.json({ success: true });
+  try {
+    const existing = await getUserById(id);
+    const ok = await deleteUser(id);
+    if (!ok) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+    logEditHistory({
+      userEmail: (token.email as string) ?? '',
+      userRole: (token.role as string) ?? undefined,
+      action: 'delete',
+      entityType: 'user',
+      entityId: id,
+      entityLabel: existing?.email,
+    });
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('read-only') || msg.includes('EROFS') || msg.includes('EACCES')) {
+      return NextResponse.json(
+        { error: 'La gestion des utilisateurs est en lecture seule sur ce déploiement (ex. Netlify).' },
+        { status: 503 }
+      );
+    }
+    throw e;
+  }
 }

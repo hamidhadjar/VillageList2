@@ -4,19 +4,37 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Biography } from '@/lib/types';
+import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
+import { Biography, getImageUrls, type BiographyRelation } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
+import { formatDateDisplay } from '@/lib/date-input';
 
 const CAN_EDIT: Role[] = ['edit', 'admin'];
 
+function formatLastEdited(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d);
+  } catch {
+    return iso;
+  }
+}
+
 export default function ViewBioPage() {
   const { data: session } = useSession();
+  const { showLastEdited } = useShowLastEdited();
   const role = (session?.user as { role?: Role })?.role;
   const canEdit = role && CAN_EDIT.includes(role);
 
   const params = useParams();
   const id = params.id as string;
-  const [bio, setBio] = useState<Biography | null>(null);
+  const [bio, setBio] = useState<(Biography & { relations?: { father?: BiographyRelation; sons: BiographyRelation[]; brothers: BiographyRelation[]; spouse?: BiographyRelation } }) | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,7 +48,8 @@ export default function ViewBioPage() {
       }
       const data = await res.json();
       if (!cancelled) {
-        setBio(data);
+        const urls = getImageUrls(data);
+        setBio({ ...data, imageUrls: urls.length ? urls : undefined, imageUrl: urls[0] });
       }
       setLoading(false);
     }
@@ -71,6 +90,24 @@ export default function ViewBioPage() {
           <Link href="/" className="btn btn-ghost">
             Retour à la liste
           </Link>
+          <a
+            href={`/api/biographies/${bio.id}/export?format=pdf`}
+            className="btn btn-ghost"
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Télécharger PDF
+          </a>
+          <a
+            href={`/api/biographies/${bio.id}/export?format=docx`}
+            className="btn btn-ghost"
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Télécharger Word
+          </a>
           {canEdit && (
             <Link href={`/edit/${bio.id}`} className="btn btn-primary">
               Modifier
@@ -80,18 +117,80 @@ export default function ViewBioPage() {
       </div>
 
       <article className="card bio-view">
-        {bio.imageUrl && (
-          <div className="bio-view-image-wrap">
-            <img src={bio.imageUrl} alt={bio.name} className="bio-view-image" />
-          </div>
-        )}
+        {(() => {
+          const imageUrls = getImageUrls(bio);
+          if (imageUrls.length === 0) return null;
+          return (
+            <div className="bio-view-image-gallery" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              {imageUrls.map((url, i) => (
+                <div key={`img-${i}-${url}`} className="bio-view-image-wrap" style={{ minHeight: '80px' }}>
+                  <img
+                    src={url}
+                    alt={`${bio.name} ${i + 1}`}
+                    className="bio-view-image"
+                    style={{ width: '100%', height: 'auto', objectFit: 'cover', display: 'block' }}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         <h2 className="bio-view-name">{bio.name}</h2>
         {bio.title && <p className="bio-view-title">{bio.title}</p>}
         {(bio.birthDate || bio.deathDate) && (
           <p className="meta bio-view-dates">
-            {bio.birthDate && <span>{bio.birthDate}</span>}
+            {bio.birthDate && <span>{formatDateDisplay(bio.birthDate)}</span>}
             {bio.birthDate && bio.deathDate && ' — '}
-            {bio.deathDate && <span>{bio.deathDate}</span>}
+            {bio.deathDate && <span>{formatDateDisplay(bio.deathDate)}</span>}
+          </p>
+        )}
+        {bio.birthPlace && (
+          <p className="meta bio-view-birth-place">Lieu de naissance : {bio.birthPlace}</p>
+        )}
+        {bio.deathPlace && (
+          <p className="meta bio-view-death-place">Lieu de décès : {bio.deathPlace}</p>
+        )}
+        {bio.relations && (bio.relations.father || bio.relations.sons?.length || bio.relations.brothers?.length || bio.relations.spouse) && (
+          <div className="bio-view-relations" style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+            {bio.relations.father && (
+              <p className="meta">
+                Père : <Link href={`/bio/${bio.relations.father.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{bio.relations.father.name}</Link>
+              </p>
+            )}
+            {bio.relations.spouse && (
+              <p className="meta">
+                Conjoint(e) : <Link href={`/bio/${bio.relations.spouse.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{bio.relations.spouse.name}</Link>
+              </p>
+            )}
+            {bio.relations.sons && bio.relations.sons.length > 0 && (
+              <p className="meta">
+                Fils : {bio.relations.sons.map((s, i) => (
+                  <span key={s.id}>
+                    {i > 0 && ', '}
+                    <Link href={`/bio/${s.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{s.name}</Link>
+                  </span>
+                ))}
+              </p>
+            )}
+            {bio.relations.brothers && bio.relations.brothers.length > 0 && (
+              <p className="meta">
+                Frères : {bio.relations.brothers.map((b, i) => (
+                  <span key={b.id}>
+                    {i > 0 && ', '}
+                    <Link href={`/bio/${b.id}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{b.name}</Link>
+                  </span>
+                ))}
+              </p>
+            )}
+          </div>
+        )}
+        {showLastEdited && (bio.lastEditedAt || bio.lastEditedBy) && (
+          <p className="meta bio-view-last-edited">
+            Dernière modification{bio.lastEditedAt ? ` le ${formatLastEdited(bio.lastEditedAt)}` : ''}{bio.lastEditedBy ? ` par ${bio.lastEditedBy}` : ''}.
           </p>
         )}
         <p className="bio-view-summary">{bio.summary}</p>

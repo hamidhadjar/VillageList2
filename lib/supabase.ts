@@ -12,8 +12,9 @@ export function getSupabase(): SupabaseClient | null {
   }
   try {
     const { createClient } = require('@supabase/supabase-js');
-    _client = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
-    return _client;
+    const client = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+    _client = client;
+    return client;
   } catch {
     _client = null;
     return null;
