@@ -35,7 +35,7 @@ export default function AskPage() {
         <div>
           <h1>Poser une question</h1>
           <p className="meta">
-            Posez une question sur les biographies. Exemples : « Combien sont morts à Alger ? », « Qui est né à Tizi Ouzou ? », « Combien de biographies ? »
+            Posez une question sur les biographies du village. L’assistant répond en s’appuyant sur les données disponibles.
           </p>
         </div>
         <Link href="/" className="btn btn-ghost">
@@ -53,7 +53,7 @@ export default function AskPage() {
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ex. Combien sont morts à Alger ?"
+            placeholder="Ex. Combien de biographies ? Où sont nées la plupart des personnes ?"
             disabled={loading}
             style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', marginBottom: '0.75rem' }}
           />

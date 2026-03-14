@@ -1,111 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllBiographies } from '@/lib/db';
+import { getAllEvents } from '@/lib/events-db';
 import type { Biography } from '@/lib/types';
+import type { Event } from '@/lib/event-types';
 
-/** Normalize place from question: trim, remove trailing ?!. */
-function normalizePlace(s: string): string {
-  return s.replace(/[?!.]$/g, '').trim();
-}
+const MAX_CONTEXT_CHARS = 12_000;
+const RESERVED_FOR_EVENTS = 2_500;
 
-/** Match "combien morts à X", "how many died in X", "décédés à X", etc. */
-function matchDeathPlaceCount(q: string): string | null {
-  const m =
-    q.match(/(?:combien|how\s+many)\s+(?:sont\s+)?(?:mort|décédé)s?\s+(?:à|dans|in)\s+(.+)/i) ||
-    q.match(/(?:combien|how\s+many)\s+(?:personnes?\s+)?(?:died|dead)\s+(?:in|at)\s+(.+)/i);
-  return m ? normalizePlace(m[1]) : null;
-}
+/** Build a rich context for the LLM: bios (name, places, dates) + events, capped in size. */
+function buildContextSummary(bios: Biography[], events: Event[]): string {
+  const parts: string[] = [];
+  parts.push(`Nombre total de biographies : ${bios.length}.`);
 
-/** Match "qui est mort à X", "list people who died in X", etc. */
-function matchDeathPlaceList(q: string): string | null {
-  const m =
-    q.match(/(?:qui|liste?|qui sont)\s+(?:est\s+)?(?:mort|décédé)s?\s+(?:à|dans|in)\s+(.+)/i) ||
-    q.match(/(?:who|list)\s+(?:are\s+)?(?:died|dead)\s+(?:in|at)\s+(.+)/i) ||
-    q.match(/(?:personnes?\s+)?(?:mortes?|décédées?)\s+(?:à|dans|in)\s+(.+)/i);
-  return m ? normalizePlace(m[m.length - 1]) : null;
-}
+  const maxBiosChars = MAX_CONTEXT_CHARS - RESERVED_FOR_EVENTS;
+  const bioLines: string[] = [];
+  let len = 0;
+  const header = 'Biographies (nom | lieu/date naissance | lieu/date décès):\n';
+  len += header.length;
+  for (const b of bios) {
+    const name = b.name?.trim() || 'Sans nom';
+    const birth = [b.birthPlace, b.birthDate].filter(Boolean).join(' ') || '?';
+    const death = [b.deathPlace, b.deathDate].filter(Boolean).join(' ') || '?';
+    const line = `- ${name} | né à ${birth} | décédé à ${death}\n`;
+    if (len + line.length > maxBiosChars) break;
+    bioLines.push(line.trim());
+    len += line.length;
+  }
+  parts.push(header + bioLines.join('\n') + (bioLines.length < bios.length ? '\n… (liste tronquée)' : ''));
 
-/** Match "combien nés à X", "how many born in X", etc. */
-function matchBirthPlaceCount(q: string): string | null {
-  const m =
-    q.match(/(?:combien|how\s+many)\s+(?:sont\s+)?nés?\s+(?:à|dans|in)\s+(.+)/i) ||
-    q.match(/(?:combien|how\s+many)\s+(?:personnes?\s+)?(?:born|birth)\s+(?:in|at)\s+(.+)/i);
-  return m ? normalizePlace(m[1]) : null;
-}
-
-/** Match "qui est né à X", "list people born in X", etc. */
-function matchBirthPlaceList(q: string): string | null {
-  const m =
-    q.match(/(?:qui|liste?)\s+(?:est\s+)?nés?\s+(?:à|dans|in)\s+(.+)/i) ||
-    q.match(/(?:who|list)\s+(?:are\s+)?(?:born|birth)\s+(?:in|at)\s+(.+)/i);
-  return m ? normalizePlace(m[m.length - 1]) : null;
-}
-
-/** Total count of biographies. */
-function matchTotalCount(q: string): boolean {
-  return /(?:combien|how\s+many|nombre|total)\s+(?:de\s+)?(?:biographies?|personnes?|people)/i.test(q)
-    || /(?:nombre\s+total|total\s+number)/i.test(q);
-}
-
-function answerQuestion(bios: Biography[], question: string): string {
-  const q = question.trim();
-  if (!q) return 'Posez une question, par exemple : « Combien sont morts à Alger ? » ou « Qui est né à Tizi Ouzou ? »';
-
-  const placeDeathCount = matchDeathPlaceCount(q);
-  if (placeDeathCount) {
-    const match = bios.filter(
-      (b) => b.deathPlace && b.deathPlace.toLowerCase().includes(placeDeathCount.toLowerCase())
-    );
-    const n = match.length;
-    if (n === 0) return `Aucune biographie avec lieu de décès contenant « ${placeDeathCount} ».`;
-    return `${n} personne${n > 1 ? 's' : ''} avec un lieu de décès contenant « ${placeDeathCount} ».`;
+  if (events.length > 0) {
+    const eventLines = events.slice(0, 50).map((e) => {
+      const t = e.title?.trim() || 'Événement';
+      const d = e.date ? ` ${e.date}` : '';
+      const p = e.place ? ` à ${e.place}` : '';
+      return `- ${t}${d}${p}`;
+    });
+    parts.push('\nÉvénements:\n' + eventLines.join('\n'));
   }
 
-  const placeDeathList = matchDeathPlaceList(q);
-  if (placeDeathList) {
-    const match = bios.filter(
-      (b) => b.deathPlace && b.deathPlace.toLowerCase().includes(placeDeathList.toLowerCase())
-    );
-    if (match.length === 0) return `Aucune biographie avec lieu de décès contenant « ${placeDeathList} ».`;
-    const names = match.slice(0, 30).map((b) => b.name);
-    const more = match.length > 30 ? ` … et ${match.length - 30} autre(s)` : '';
-    return `${match.length} personne(s) : ${names.join(', ')}${more}.`;
+  return parts.join('\n');
+}
+
+/** Call Groq (Llama) to answer the question using biography and events context. */
+async function askGroq(question: string, contextSummary: string): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey?.trim()) {
+    return 'Configurez GROQ_API_KEY dans .env pour utiliser le chat. (https://console.groq.com)';
   }
 
-  const placeBirthCount = matchBirthPlaceCount(q);
-  if (placeBirthCount) {
-    const match = bios.filter(
-      (b) => b.birthPlace && b.birthPlace.toLowerCase().includes(placeBirthCount.toLowerCase())
-    );
-    const n = match.length;
-    if (n === 0) return `Aucune biographie avec lieu de naissance contenant « ${placeBirthCount} ».`;
-    return `${n} personne${n > 1 ? 's' : ''} avec un lieu de naissance contenant « ${placeBirthCount} ».`;
+  const systemPrompt = `Tu es un assistant qui répond aux questions sur les biographies et les événements d'un village. Réponds en français, de façon claire et factuelle en t'appuyant uniquement sur les données fournies ci-dessous. Si la réponse n'est pas dans les données, dis-le poliment.
+
+Données disponibles :
+${contextSummary}`;
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: question },
+      ],
+      max_tokens: 512,
+      temperature: 0.2,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('Groq API error:', res.status, err);
+    return 'Désolé, une erreur est survenue (Groq). Réessayez ou vérifiez votre clé API.';
   }
 
-  const placeBirthList = matchBirthPlaceList(q);
-  if (placeBirthList) {
-    const match = bios.filter(
-      (b) => b.birthPlace && b.birthPlace.toLowerCase().includes(placeBirthList.toLowerCase())
-    );
-    if (match.length === 0) return `Aucune biographie avec lieu de naissance contenant « ${placeBirthList} ».`;
-    const names = match.slice(0, 30).map((b) => b.name);
-    const more = match.length > 30 ? ` … et ${match.length - 30} autre(s)` : '';
-    return `${match.length} personne(s) : ${names.join(', ')}${more}.`;
-  }
-
-  if (matchTotalCount(q)) {
-    const n = bios.length;
-    return `Il y a ${n} biographie${n > 1 ? 's' : ''} au total.`;
-  }
-
-  return 'Je ne comprends pas cette question. Vous pouvez demander par exemple : « Combien sont morts à Alger ? », « Qui est né à Tizi Ouzou ? », « Combien de biographies ? »';
+  const data = await res.json();
+  const content = data?.choices?.[0]?.message?.content?.trim();
+  return content || 'Désolé, je n\'ai pas pu générer une réponse.';
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const question = typeof body?.question === 'string' ? body.question : '';
-    const bios = await getAllBiographies();
-    const answer = answerQuestion(bios, question);
+    const question = typeof body?.question === 'string' ? body.question.trim() : '';
+    if (!question) {
+      return NextResponse.json({
+        answer: 'Posez une question sur les biographies du village.',
+      });
+    }
+
+    const [bios, events] = await Promise.all([getAllBiographies(), getAllEvents()]);
+    const contextSummary = buildContextSummary(bios, events);
+    const answer = await askGroq(question, contextSummary);
     return NextResponse.json({ answer });
   } catch (e) {
     return NextResponse.json({ error: 'Erreur lors de la recherche.', answer: '' }, { status: 500 });
