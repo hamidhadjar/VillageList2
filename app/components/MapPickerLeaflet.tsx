@@ -27,11 +27,13 @@ function MapClickHandler({ onSelect }: { onSelect: (lat: number, lng: number) =>
   return null;
 }
 
-function CenterUpdater({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
+function CenterUpdater({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lng], zoom);
-  }, [map, lat, lng, zoom]);
+    // Keep the user's current zoom level when updating the marker position.
+    // This prevents "zooming out" after a location is selected.
+    map.setView([lat, lng], map.getZoom());
+  }, [map, lat, lng]);
   return null;
 }
 
@@ -71,7 +73,7 @@ export function MapPickerLeaflet({ lat, lng, onSelect, height = '360px' }: MapPi
       <MapClickHandler onSelect={onSelect} />
       {hasPosition && (
         <>
-          <CenterUpdater lat={lat} lng={lng} zoom={zoom} />
+          <CenterUpdater lat={lat} lng={lng} />
           <Marker position={[lat, lng]} icon={icon} />
         </>
       )}
