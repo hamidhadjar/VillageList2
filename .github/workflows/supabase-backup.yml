@@ -1,4 +1,4 @@
-name: Supabase Backup (Roles + Schema + Data)
+name: Supabase Backup (Full)
 
 on:
   schedule:
@@ -8,8 +8,10 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
+
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
     steps:
       - name: Checkout
@@ -31,8 +33,6 @@ jobs:
           mkdir -p "backup-$TS"
 
       - name: Link project
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
 
@@ -40,40 +40,38 @@ jobs:
         run: |
           supabase db dump --role-only --file "backup-$TS/roles.sql"
 
-      - name: Dump schema
+      - name: Dump public schema
         run: |
           supabase db dump --schema public --file "backup-$TS/schema_public.sql"
 
-      - name: Dump data
+      - name: Dump public data
         run: |
           supabase db dump --data-only --use-copy --schema public --file "backup-$TS/data_public.sql"
 
-      - name: Dump migration history
+      - name: Dump migrations
         run: |
           supabase db dump --schema supabase_migrations --file "backup-$TS/schema_migrations.sql"
           supabase db dump --data-only --use-copy --schema supabase_migrations --file "backup-$TS/data_migrations.sql"
 
-      - name: Optional auth schema dump
+      - name: Optional auth schema
         run: |
           supabase db dump --schema auth --file "backup-$TS/schema_auth.sql" || true
 
-      - name: Optional storage schema dump
+      - name: Optional storage schema
         run: |
           supabase db dump --schema storage --file "backup-$TS/schema_storage.sql" || true
 
-      - name: Create README note
+      - name: Create README
         run: |
           cat > "backup-$TS/README.txt" <<'EOF'
-          This backup contains:
-          - database roles
-          - public schema
-          - public data
-          - supabase_migrations schema and data
-          - optional auth/storage schema dumps if available
+          Supabase backup contents:
+          - roles
+          - public schema + data
+          - migrations
+          - optional auth/storage schema
 
-          Important:
-          - Supabase database backups do NOT include actual Storage bucket files/objects.
-          - Storage backups only include database metadata unless you back up object files separately.
+          NOTE:
+          Storage bucket FILES are NOT included.
           EOF
 
       - name: Compress backup
@@ -89,7 +87,7 @@ jobs:
           mkdir -p ~/.config/rclone
           echo "${{ secrets.RCLONE_CONFIG_BASE64 }}" | base64 -d > ~/.config/rclone/rclone.conf
 
-      - name: Upload backup to Google Drive
+      - name: Upload to Google Drive
         run: |
           DEST="${{ secrets.GDRIVE_FOLDER }}"
           if [ -z "$DEST" ]; then DEST="supabase-backups"; fi
