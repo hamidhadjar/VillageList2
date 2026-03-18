@@ -1,0 +1,42 @@
+name: Supabase Backup (Simple)
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+
+      - name: Set timestamp
+        run: |
+          TS=$(date +"%Y-%m-%d_%H-%M-%S")
+          echo "TS=$TS" >> $GITHUB_ENV
+
+      - name: Dump database
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
+          supabase db dump --file supabase-$TS.sql
+
+      - name: Compress backup
+        run: |
+          tar -czf supabase-$TS.tar.gz supabase-$TS.sql
+
+      - name: Install rclone
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Restore rclone config
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONFIG_BASE64 }}" | base64 -d > ~/.config/rclone/rclone.conf
+
+      - name: Upload backup to Google Drive
+        run: |
+          rclone copy supabase-$TS.tar.gz gdrive:${{ secrets.GDRIVE_FOLDER }}
