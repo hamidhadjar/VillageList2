@@ -1,4 +1,4 @@
-name: Supabase Backup (Full)
+name: Supabase Backup (DB + Storage)
 
 on:
   schedule:
@@ -8,6 +8,7 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
+
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -25,13 +26,18 @@ jobs:
       - name: Verify Supabase CLI
         run: supabase --version
 
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+
       - name: Set timestamp
         run: |
           TS=$(date +"%Y-%m-%d_%H-%M-%S")
-          echo "TS=$TS" >> $GITHUB_ENV
+          echo "TS=$TS" >> "$GITHUB_ENV"
           mkdir -p "backup-$TS"
 
-      - name: Link project
+      - name: Link Supabase project
         run: |
           supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
 
@@ -47,11 +53,6 @@ jobs:
         run: |
           supabase db dump --data-only --use-copy --schema public --file "backup-$TS/data_public.sql"
 
-      - name: Dump migration history if present
-        run: |
-          supabase db dump --schema supabase_migrations --file "backup-$TS/schema_migrations.sql" || true
-          supabase db dump --data-only --use-copy --schema supabase_migrations --file "backup-$TS/data_migrations.sql" || true
-
       - name: Dump auth schema if present
         run: |
           supabase db dump --schema auth --file "backup-$TS/schema_auth.sql" || true
@@ -60,18 +61,51 @@ jobs:
         run: |
           supabase db dump --schema storage --file "backup-$TS/schema_storage.sql" || true
 
+      - name: Dump migration schema if present
+        run: |
+          supabase db dump --schema supabase_migrations --file "backup-$TS/schema_migrations.sql" || true
+          supabase db dump --data-only --use-copy --schema supabase_migrations --file "backup-$TS/data_migrations.sql" || true
+
+      - name: Backup Storage bucket files via S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+          AWS_EC2_METADATA_DISABLED: "true"
+          S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+        run: |
+          mkdir -p "backup-$TS/storage"
+
+          BUCKETS=$(aws \
+            --endpoint-url "$S3_ENDPOINT" \
+            --region "$AWS_DEFAULT_REGION" \
+            s3api list-buckets \
+            --query 'Buckets[].Name' \
+            --output text)
+
+          for BUCKET in $BUCKETS; do
+            echo "Backing up bucket: $BUCKET"
+            mkdir -p "backup-$TS/storage/$BUCKET"
+            aws \
+              --endpoint-url "$S3_ENDPOINT" \
+              --region "$AWS_DEFAULT_REGION" \
+              s3 sync "s3://$BUCKET" "backup-$TS/storage/$BUCKET"
+          done
+
       - name: Create README
         run: |
           cat > "backup-$TS/README.txt" <<'EOF'
           Supabase backup contents:
           - roles
           - public schema + data
-          - optional supabase_migrations
-          - optional auth/storage schema
+          - optional auth schema
+          - optional storage schema
+          - optional supabase_migrations schema + data
+          - storage bucket files via S3
 
           Notes:
-          - supabase_migrations is only dumped if your project uses Supabase CLI migrations.
-          - Storage bucket files/objects are NOT included in this backup.
+          - Storage object files are backed up separately from the database dump.
+          - Supabase Storage does not support S3 versioning.
           EOF
 
       - name: Compress backup
@@ -87,7 +121,7 @@ jobs:
           mkdir -p ~/.config/rclone
           echo "${{ secrets.RCLONE_CONFIG_BASE64 }}" | base64 -d > ~/.config/rclone/rclone.conf
 
-      - name: Upload to Google Drive
+      - name: Upload backup to Google Drive
         run: |
           DEST="${{ secrets.GDRIVE_FOLDER }}"
           if [ -z "$DEST" ]; then DEST="supabase-backups"; fi
