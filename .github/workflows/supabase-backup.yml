@@ -8,7 +8,6 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
-
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -48,16 +47,16 @@ jobs:
         run: |
           supabase db dump --data-only --use-copy --schema public --file "backup-$TS/data_public.sql"
 
-      - name: Dump migrations
+      - name: Dump migration history if present
         run: |
-          supabase db dump --schema supabase_migrations --file "backup-$TS/schema_migrations.sql"
-          supabase db dump --data-only --use-copy --schema supabase_migrations --file "backup-$TS/data_migrations.sql"
+          supabase db dump --schema supabase_migrations --file "backup-$TS/schema_migrations.sql" || true
+          supabase db dump --data-only --use-copy --schema supabase_migrations --file "backup-$TS/data_migrations.sql" || true
 
-      - name: Optional auth schema
+      - name: Dump auth schema if present
         run: |
           supabase db dump --schema auth --file "backup-$TS/schema_auth.sql" || true
 
-      - name: Optional storage schema
+      - name: Dump storage schema if present
         run: |
           supabase db dump --schema storage --file "backup-$TS/schema_storage.sql" || true
 
@@ -67,11 +66,12 @@ jobs:
           Supabase backup contents:
           - roles
           - public schema + data
-          - migrations
+          - optional supabase_migrations
           - optional auth/storage schema
 
-          NOTE:
-          Storage bucket FILES are NOT included.
+          Notes:
+          - supabase_migrations is only dumped if your project uses Supabase CLI migrations.
+          - Storage bucket files/objects are NOT included in this backup.
           EOF
 
       - name: Compress backup
