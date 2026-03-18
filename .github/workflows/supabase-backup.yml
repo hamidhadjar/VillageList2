@@ -1,4 +1,4 @@
-name: Supabase Backup (Simple)
+name: Supabase Backup (Roles + Schema + Data)
 
 on:
   schedule:
@@ -28,17 +28,57 @@ jobs:
         run: |
           TS=$(date +"%Y-%m-%d_%H-%M-%S")
           echo "TS=$TS" >> $GITHUB_ENV
+          mkdir -p "backup-$TS"
 
-      - name: Dump database
+      - name: Link project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
-          supabase db dump --file "supabase-$TS.sql"
+
+      - name: Dump roles
+        run: |
+          supabase db dump --role-only --file "backup-$TS/roles.sql"
+
+      - name: Dump schema
+        run: |
+          supabase db dump --schema public --file "backup-$TS/schema_public.sql"
+
+      - name: Dump data
+        run: |
+          supabase db dump --data-only --use-copy --schema public --file "backup-$TS/data_public.sql"
+
+      - name: Dump migration history
+        run: |
+          supabase db dump --schema supabase_migrations --file "backup-$TS/schema_migrations.sql"
+          supabase db dump --data-only --use-copy --schema supabase_migrations --file "backup-$TS/data_migrations.sql"
+
+      - name: Optional auth schema dump
+        run: |
+          supabase db dump --schema auth --file "backup-$TS/schema_auth.sql" || true
+
+      - name: Optional storage schema dump
+        run: |
+          supabase db dump --schema storage --file "backup-$TS/schema_storage.sql" || true
+
+      - name: Create README note
+        run: |
+          cat > "backup-$TS/README.txt" <<'EOF'
+          This backup contains:
+          - database roles
+          - public schema
+          - public data
+          - supabase_migrations schema and data
+          - optional auth/storage schema dumps if available
+
+          Important:
+          - Supabase database backups do NOT include actual Storage bucket files/objects.
+          - Storage backups only include database metadata unless you back up object files separately.
+          EOF
 
       - name: Compress backup
         run: |
-          tar -czf "supabase-$TS.tar.gz" "supabase-$TS.sql"
+          tar -czf "supabase-backup-$TS.tar.gz" "backup-$TS"
 
       - name: Install rclone
         run: |
@@ -53,4 +93,4 @@ jobs:
         run: |
           DEST="${{ secrets.GDRIVE_FOLDER }}"
           if [ -z "$DEST" ]; then DEST="supabase-backups"; fi
-          rclone copy "supabase-$TS.tar.gz" "gdrive:$DEST"
+          rclone copy "supabase-backup-$TS.tar.gz" "gdrive:$DEST"
