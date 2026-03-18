@@ -8,7 +8,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const DEFAULT_CENTER: [number, number] = [36.633696, 4.603020];
-const DEFAULT_ZOOM = 10;
+const DEFAULT_ZOOM = 13;
 
 const icon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -27,11 +27,11 @@ function MapClickHandler({ onSelect }: { onSelect: (lat: number, lng: number) =>
   return null;
 }
 
-function CenterUpdater({ lat, lng }: { lat: number; lng: number }) {
+function CenterUpdater({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lng], 12);
-  }, [map, lat, lng]);
+    map.setView([lat, lng], zoom);
+  }, [map, lat, lng, zoom]);
   return null;
 }
 
@@ -45,7 +45,7 @@ export interface MapPickerLeafletProps {
 export function MapPickerLeaflet({ lat, lng, onSelect, height = '360px' }: MapPickerLeafletProps) {
   const hasPosition = lat != null && lng != null && !Number.isNaN(lat) && !Number.isNaN(lng);
   const center: [number, number] = hasPosition ? [lat, lng] : DEFAULT_CENTER;
-  const zoom = hasPosition ? 12 : DEFAULT_ZOOM;
+  const zoom = DEFAULT_ZOOM;
 
   return (
     <MapContainer
@@ -71,7 +71,7 @@ export function MapPickerLeaflet({ lat, lng, onSelect, height = '360px' }: MapPi
       <MapClickHandler onSelect={onSelect} />
       {hasPosition && (
         <>
-          <CenterUpdater lat={lat} lng={lng} />
+          <CenterUpdater lat={lat} lng={lng} zoom={zoom} />
           <Marker position={[lat, lng]} icon={icon} />
         </>
       )}

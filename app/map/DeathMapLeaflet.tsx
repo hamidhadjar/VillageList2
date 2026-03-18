@@ -11,7 +11,7 @@ import type { Biography } from '@/lib/types';
 import type { Event } from '@/lib/event-types';
 
 const DEFAULT_CENTER: [number, number] = [36.633696, 4.603020];
-const DEFAULT_ZOOM = 10;
+const DEFAULT_ZOOM = 13;
 
 // Fix default icon in Leaflet with react-leaflet (next/build)
 const icon = L.icon({
