@@ -8,10 +8,20 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
+        run: |
+          npm install -g supabase
+
+      - name: Verify Supabase CLI
+        run: |
+          supabase --version
 
       - name: Set timestamp
         run: |
@@ -22,15 +32,16 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
-          supabase db dump --file supabase-$TS.sql
+          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
+          supabase db dump --file "supabase-$TS.sql"
 
       - name: Compress backup
         run: |
-          tar -czf supabase-$TS.tar.gz supabase-$TS.sql
+          tar -czf "supabase-$TS.tar.gz" "supabase-$TS.sql"
 
       - name: Install rclone
-        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+        run: |
+          curl -fsSL https://rclone.org/install.sh | sudo bash
 
       - name: Restore rclone config
         run: |
@@ -39,4 +50,6 @@ jobs:
 
       - name: Upload backup to Google Drive
         run: |
-          rclone copy supabase-$TS.tar.gz gdrive:${{ secrets.GDRIVE_FOLDER }}
+          DEST="${{ secrets.GDRIVE_FOLDER }}"
+          if [ -z "$DEST" ]; then DEST="supabase-backups"; fi
+          rclone copy "supabase-$TS.tar.gz" "gdrive:$DEST"
