@@ -94,6 +94,18 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
+  /** Scroll to event when opened from admin historique link (#event-<id>). */
+  useEffect(() => {
+    if (loading || events.length === 0) return;
+    const hash = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
+    if (!hash.startsWith('event-')) return;
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(hash);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    return () => window.clearTimeout(t);
+  }, [loading, events]);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('eventsViewMode') as ViewMode | null;
@@ -586,7 +598,7 @@ export default function EventsPage() {
             const shortDesc = ev.description?.trim() ? (ev.description.length > 140 ? ev.description.slice(0, 140).trim() + '…' : ev.description) : '';
             const lastEditedStr = formatLastEditedShort(ev);
             return (
-              <div key={ev.id} className="card gallery-card">
+              <div key={ev.id} id={`event-${ev.id}`} className="card gallery-card">
                 <div className="gallery-media" aria-hidden="true">
                   {firstUrl ? (
                     <img src={firstUrl} alt="" className="gallery-image" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -634,7 +646,7 @@ export default function EventsPage() {
             const urls = ev.imageUrls?.length ? ev.imageUrls : (ev.imageUrl ? [ev.imageUrl] : []);
             const lastEditedStr = formatLastEditedShort(ev);
             return (
-            <li key={ev.id} className="card" style={{ marginBottom: '0.75rem' }}>
+            <li key={ev.id} id={`event-${ev.id}`} className="card" style={{ marginBottom: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {urls.length > 0 && (

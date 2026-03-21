@@ -38,6 +38,48 @@ function formatDate(iso: string): string {
   }
 }
 
+/** Link target for biography / event rows in the history table. */
+function entityLinkHref(entry: EditHistoryEntry): string | null {
+  const id = entry.entityId?.trim();
+  if (!id) return null;
+  if (entry.entityType === 'biography') return `/bio/${encodeURIComponent(id)}`;
+  if (entry.entityType === 'event') return `/events#event-${encodeURIComponent(id)}`;
+  return null;
+}
+
+function HistoryEntityCell({ entry }: { entry: EditHistoryEntry }) {
+  const href = entityLinkHref(entry);
+  const id = entry.entityId?.trim();
+  const title = id || undefined;
+  const fallbackId = id && id.length > 8 ? `${id.slice(0, 8)}…` : id;
+
+  if (!entry.entityLabel?.trim() && !id) return <>—</>;
+
+  const children = entry.entityLabel?.trim() || fallbackId || '—';
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        title={title}
+        style={{ color: 'var(--link, #2563eb)', textDecoration: 'underline' }}
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <span title={title}>
+      {entry.entityLabel?.trim() ? (
+        entry.entityLabel.trim()
+      ) : (
+        <span className="meta">{fallbackId ?? '—'}</span>
+      )}
+    </span>
+  );
+}
+
 export default function AdminHistoryPage() {
   const [entries, setEntries] = useState<EditHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -299,13 +341,7 @@ export default function AdminHistoryPage() {
                   <td style={{ padding: '0.75rem' }}>{ACTION_LABEL[entry.action]}</td>
                   <td style={{ padding: '0.75rem' }}>{ENTITY_LABEL[entry.entityType]}</td>
                   <td style={{ padding: '0.75rem' }}>
-                    {entry.entityLabel ? (
-                      <span title={entry.entityId}>{entry.entityLabel}</span>
-                    ) : entry.entityId ? (
-                      <span className="meta">{entry.entityId.slice(0, 8)}…</span>
-                    ) : (
-                      '—'
-                    )}
+                    <HistoryEntityCell entry={entry} />
                   </td>
                 </tr>
               ))}
