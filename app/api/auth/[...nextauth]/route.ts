@@ -39,6 +39,12 @@ const handler = NextAuth({
       }
       return session;
     },
+    redirect({ url, baseUrl }) {
+      // After login, send to biography list (home) unless a valid callbackUrl was provided.
+      if (!url || url === `${baseUrl}/login` || url === `${baseUrl}/login/`) return `${baseUrl}/`;
+      if (url.startsWith(baseUrl)) return url;
+      return `${baseUrl}/`;
+    },
   },
   pages: {
     signIn: '/login',

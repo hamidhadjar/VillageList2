@@ -1,0 +1,131 @@
+name: Supabase Backup (DB + Storage)
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL -o supabase.deb \
+            https://github.com/supabase/cli/releases/download/v2.78.1/supabase_2.78.1_linux_amd64.deb
+          sudo dpkg -i supabase.deb
+
+      - name: Verify Supabase CLI
+        run: supabase --version
+
+      - name: Install unzip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+
+      - name: Install AWS CLI v2
+        run: |
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          aws --version
+
+      - name: Set timestamp
+        run: |
+          TS=$(date +"%Y-%m-%d_%H-%M-%S")
+          echo "TS=$TS" >> "$GITHUB_ENV"
+          mkdir -p "backup-$TS"
+
+      - name: Link Supabase project
+        run: |
+          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
+
+      - name: Dump roles
+        run: |
+          supabase db dump --role-only --file "backup-$TS/roles.sql"
+
+      - name: Dump public schema
+        run: |
+          supabase db dump --schema public --file "backup-$TS/schema_public.sql"
+
+      - name: Dump public data
+        run: |
+          supabase db dump --data-only --use-copy --schema public --file "backup-$TS/data_public.sql"
+
+      - name: Dump auth schema if present
+        run: |
+          supabase db dump --schema auth --file "backup-$TS/schema_auth.sql" || true
+
+      - name: Dump storage schema if present
+        run: |
+          supabase db dump --schema storage --file "backup-$TS/schema_storage.sql" || true
+
+      - name: Dump migration schema if present
+        run: |
+          supabase db dump --schema supabase_migrations --file "backup-$TS/schema_migrations.sql" || true
+          supabase db dump --data-only --use-copy --schema supabase_migrations --file "backup-$TS/data_migrations.sql" || true
+
+      - name: Backup Storage bucket files via S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+          AWS_EC2_METADATA_DISABLED: "true"
+          S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+        run: |
+          mkdir -p "backup-$TS/storage"
+
+          BUCKETS=$(aws \
+            --endpoint-url "$S3_ENDPOINT" \
+            --region "$AWS_DEFAULT_REGION" \
+            s3api list-buckets \
+            --query 'Buckets[].Name' \
+            --output text)
+
+          for BUCKET in $BUCKETS; do
+            echo "Backing up bucket: $BUCKET"
+            mkdir -p "backup-$TS/storage/$BUCKET"
+            aws \
+              --endpoint-url "$S3_ENDPOINT" \
+              --region "$AWS_DEFAULT_REGION" \
+              s3 sync "s3://$BUCKET" "backup-$TS/storage/$BUCKET"
+          done
+
+      - name: Create README
+        run: |
+          cat > "backup-$TS/README.txt" <<'EOF'
+          Supabase backup contents:
+          - roles
+          - public schema + data
+          - optional auth schema
+          - optional storage schema
+          - optional supabase_migrations schema + data
+          - storage bucket files via S3
+          EOF
+
+      - name: Compress backup
+        run: |
+          tar -czf "supabase-backup-$TS.tar.gz" "backup-$TS"
+
+      - name: Install rclone
+        run: |
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Restore rclone config
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONFIG_BASE64 }}" | base64 -d > ~/.config/rclone/rclone.conf
+
+      - name: Upload backup to Google Drive
+        run: |
+          DEST="${{ secrets.GDRIVE_FOLDER }}"
+          if [ -z "$DEST" ]; then DEST="supabase-backups"; fi
+          rclone copy "supabase-backup-$TS.tar.gz" "gdrive:$DEST"

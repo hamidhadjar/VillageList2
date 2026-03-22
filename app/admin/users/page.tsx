@@ -21,6 +21,7 @@ export default function AdminUsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ email: '', role: 'viewer' as Role, password: '' });
   const [forbidden, setForbidden] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const fetchUsers = async () => {
     const res = await fetch('/api/users');
@@ -42,19 +43,35 @@ export default function AdminUsersPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: form.email, password: form.password, role: form.role }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || 'Erreur');
-      return;
+    setCreating(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ email: form.email, password: form.password, role: form.role }),
+      });
+      let data: { error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setError(res.ok ? 'Réponse invalide.' : `Erreur ${res.status}. Réessayez.`);
+        setCreating(false);
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error || 'Erreur');
+        setCreating(false);
+        return;
+      }
+      setShowForm(false);
+      setForm({ email: '', password: '', role: 'viewer' });
+      await fetchUsers();
+    } catch (err) {
+      setError('Erreur réseau ou serveur. Réessayez.');
+    } finally {
+      setCreating(false);
     }
-    setShowForm(false);
-    setForm({ email: '', password: '', role: 'viewer' });
-    fetchUsers();
   };
 
   const handleUpdate = async (e: React.FormEvent, id: string) => {
@@ -81,8 +98,14 @@ export default function AdminUsersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cet utilisateur ?')) return;
+    setError('');
     const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-    if (res.ok) fetchUsers();
+    if (res.ok) {
+      fetchUsers();
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    setError(data.error || 'Impossible de supprimer.');
   };
 
   if (loading) {
@@ -124,6 +147,12 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {error && (
+        <p style={{ color: 'var(--danger)', marginBottom: '1rem' }} role="alert">
+          {error}
+        </p>
+      )}
+
       {showForm && (
         <form onSubmit={handleCreate} className="card" style={{ marginBottom: '1.5rem' }}>
           <h3 style={{ marginBottom: '1rem' }}>Nouvel utilisateur</h3>
@@ -160,13 +189,12 @@ export default function AdminUsersPage() {
               <option value="admin">Administrateur</option>
             </select>
           </div>
-          {error && <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</p>}
           <div className="actions">
             <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>
               Annuler
             </button>
-            <button type="submit" className="btn btn-primary">
-              Créer
+            <button type="submit" className="btn btn-primary" disabled={creating}>
+              {creating ? 'Création…' : 'Créer'}
             </button>
           </div>
         </form>
@@ -206,7 +234,6 @@ export default function AdminUsersPage() {
                     <option value="admin">Administrateur</option>
                   </select>
                 </div>
-                {error && <p style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</p>}
                 <div className="actions">
                   <button type="button" className="btn btn-ghost" onClick={() => setEditingId(null)}>
                     Annuler

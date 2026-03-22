@@ -1,10 +1,26 @@
 [
   {
     "id": "c42e9be5-a254-4f56-b869-166a404719d1",
-    "email": "admin@example.com",
-    "passwordHash": "$2a$10$6RDzmpAORww608kmQBniSuuluivXVK.ISrZ1AscWy7ga9PJhCgeE.",
-    "role": "admin",
+    "email": "ixulaf@gmail.com",
+    "passwordHash": "$2a$10$p8mpKJeMGsteEXkNbpXitOW.xeam3xN/Nz/YkrKHtfgfdLMFjjz0q",
+    "role": "edit",
     "createdAt": "2026-03-02T22:13:01.256Z",
-    "updatedAt": "2026-03-02T22:13:01.256Z"
+    "updatedAt": "2026-03-02T23:57:56.243Z"
+  },
+  {
+    "email": "hadjar.hamid@gmail.com",
+    "passwordHash": "$2a$10$k5m519Zp2wsd4/UAJFeJpO76eXA7h1p16XAYm/NczvatekE3CZXVW",
+    "role": "admin",
+    "id": "6b5a75b1-5193-482e-9023-1efcc836cdc1",
+    "createdAt": "2026-03-02T22:34:55.464Z",
+    "updatedAt": "2026-03-02T22:36:32.257Z"
+  },
+  {
+    "email": "tarik@gmail.com",
+    "passwordHash": "$2a$10$f/exk/H450ACtvPtxgLyEeuK7qZGaAwpxEXnXLc3SlwhUc0e5T.Sq",
+    "role": "edit",
+    "id": "92e33dcf-96e5-4ab8-a892-9fe2da0c0fa5",
+    "createdAt": "2026-03-02T23:58:23.873Z",
+    "updatedAt": "2026-03-02T23:58:23.873Z"
   }
 ]

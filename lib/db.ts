@@ -5,17 +5,39 @@ import { Biography } from './types';
 const TABLE = 'biographies';
 
 function rowToBio(row: Record<string, unknown>): Biography {
+  const imageUrls = Array.isArray(row.image_urls)
+    ? (row.image_urls as string[])
+    : (row.image_url ? [row.image_url as string] : []);
+  const imageUrl = imageUrls[0];
+  // Normalize IDs to string (Supabase may return bigint as number)
+  const toStr = (x: unknown): string => (x == null ? '' : String(x).trim());
+  const sonIdsRaw = Array.isArray(row.son_ids) ? row.son_ids : [];
+  const sonIds = sonIdsRaw.map(toStr).filter(Boolean);
+  const brotherIdsRaw = Array.isArray(row.brother_ids) ? row.brother_ids : [];
+  const brotherIds = brotherIdsRaw.map(toStr).filter(Boolean);
   return {
-    id: row.id as string,
+    id: toStr(row.id) || String(row.id ?? ''),
     name: row.name as string,
     title: (row.title as string) ?? undefined,
     birthDate: (row.birth_date as string) ?? undefined,
+    birthPlace: (row.birth_place as string) ?? undefined,
     deathDate: (row.death_date as string) ?? undefined,
     summary: row.summary as string,
     fullBio: row.full_bio as string,
-    imageUrl: (row.image_url as string) ?? undefined,
+    imageUrl,
+    imageUrls: imageUrls.length ? imageUrls : undefined,
+    fatherId: toStr(row.father_id) || undefined,
+    sonIds: sonIds.length ? sonIds : undefined,
+    brotherIds: brotherIds.length ? brotherIds : undefined,
+    spouseId: toStr(row.spouse_id) || undefined,
+    deathPlace: (row.death_place as string) ?? undefined,
+    deathLat: row.death_lat != null ? Number(row.death_lat) : undefined,
+    deathLng: row.death_lng != null ? Number(row.death_lng) : undefined,
+    chahid: row.chahid !== false,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+    lastEditedAt: (row.last_edited_at as string) ?? undefined,
+    lastEditedBy: (row.last_edited_by as string) ?? undefined,
   };
 }
 
@@ -52,15 +74,26 @@ export async function createBiography(
 ): Promise<Biography> {
   const supabase = getSupabase();
   if (supabase) {
-    const row = {
+    const imageUrls = input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : []);
+    const row: Record<string, unknown> = {
       name: input.name,
       title: input.title ?? null,
       birth_date: input.birthDate ?? null,
+      birth_place: input.birthPlace?.trim() || null,
       death_date: input.deathDate ?? null,
       summary: input.summary,
       full_bio: input.fullBio,
-      image_url: input.imageUrl ?? null,
+      image_url: imageUrls[0] ?? null,
+      father_id: input.fatherId ?? null,
+      son_ids: input.sonIds?.length ? input.sonIds : null,
+      brother_ids: input.brotherIds?.length ? input.brotherIds : null,
+      spouse_id: input.spouseId?.trim() || null,
+      death_place: input.deathPlace?.trim() || null,
+      death_lat: input.deathLat != null ? input.deathLat : null,
+      death_lng: input.deathLng != null ? input.deathLng : null,
+      chahid: input.chahid === true,
     };
+    if (imageUrls.length) row.image_urls = imageUrls;
     const { data, error } = await supabase.from(TABLE).insert(row).select().single();
     if (error) throw error;
     return rowToBio(data);
@@ -78,11 +111,29 @@ export async function updateBiography(
     if (input.name !== undefined) row.name = input.name;
     if (input.title !== undefined) row.title = input.title;
     if (input.birthDate !== undefined) row.birth_date = input.birthDate;
+    if (input.birthPlace !== undefined) row.birth_place = input.birthPlace?.trim() || null;
     if (input.deathDate !== undefined) row.death_date = input.deathDate;
     if (input.summary !== undefined) row.summary = input.summary;
     if (input.fullBio !== undefined) row.full_bio = input.fullBio;
-    if (input.imageUrl !== undefined) row.image_url = input.imageUrl ?? null;
-    row.updated_at = new Date().toISOString();
+    if (input.imageUrls !== undefined) {
+      row.image_urls = input.imageUrls?.length ? input.imageUrls : [];
+      row.image_url = input.imageUrls?.[0] ?? null;
+    } else if (input.imageUrl !== undefined) {
+      row.image_url = input.imageUrl ?? null;
+      row.image_urls = input.imageUrl ? [input.imageUrl] : [];
+    }
+    if (input.fatherId !== undefined) row.father_id = input.fatherId?.trim() || null;
+    if (input.sonIds !== undefined) row.son_ids = input.sonIds?.length ? input.sonIds : [];
+    if (input.brotherIds !== undefined) row.brother_ids = input.brotherIds?.length ? input.brotherIds : [];
+    if (input.spouseId !== undefined) row.spouse_id = input.spouseId?.trim() || null;
+    if (input.deathPlace !== undefined) row.death_place = input.deathPlace?.trim() || null;
+    if (input.deathLat !== undefined) row.death_lat = input.deathLat != null ? input.deathLat : null;
+    if (input.deathLng !== undefined) row.death_lng = input.deathLng != null ? input.deathLng : null;
+    if (input.chahid !== undefined) row.chahid = input.chahid !== false;
+    const now = new Date().toISOString();
+    row.updated_at = now;
+    if (input.lastEditedAt !== undefined) row.last_edited_at = input.lastEditedAt;
+    if (input.lastEditedBy !== undefined) row.last_edited_by = input.lastEditedBy;
 
     const { data, error } = await supabase
       .from(TABLE)

@@ -1,25 +1,29 @@
-import { NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { getAllUsers, createUser, getUserByEmail } from '@/lib/users-store';
+import { NextRequest, NextResponse } from 'next/server';
+import { getTokenSafe } from '@/lib/auth-token';
+import { getAllUsers, createUser, getUserByEmail } from '@/lib/users-db';
+import { logEditHistory } from '@/lib/edit-history-db';
 import { hashPassword } from '@/lib/auth';
 import type { Role } from '@/lib/user-types';
-import { getNextAuthSecret } from '@/lib/nextauth-secret';
 
-export async function GET() {
-  const token = await getToken({ secret: getNextAuthSecret() });
+export async function GET(request: NextRequest) {
+  const token = await getTokenSafe(request);
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
   try {
-    const users = getAllUsers();
+    const users = await getAllUsers();
     return NextResponse.json(users);
   } catch (e) {
-    return NextResponse.json({ error: 'Erreur' }, { status: 500 });
+    console.error('GET /api/users error:', e);
+    const message =
+      e instanceof Error ? e.message : typeof (e as { message?: string })?.message === 'string' ? (e as { message: string }).message : '';
+    const safeMessage = message && message.length < 200 ? message : 'Erreur';
+    return NextResponse.json({ error: safeMessage }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
-  const token = await getToken({ secret: getNextAuthSecret() });
+export async function POST(request: NextRequest) {
+  const token = await getTokenSafe(request);
   if (!token || (token.role as string) !== 'admin') {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   }
@@ -36,17 +40,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Rôle invalide.' }, { status: 400 });
     }
     const normalizedEmail = email.trim().toLowerCase();
-    if (getUserByEmail(normalizedEmail)) {
+    const existing = await getUserByEmail(normalizedEmail);
+    if (existing) {
       return NextResponse.json({ error: 'Un utilisateur avec cet email existe déjà.' }, { status: 400 });
     }
     const passwordHash = await hashPassword(password.trim());
-    const user = createUser({
+    const user = await createUser({
       email: normalizedEmail,
       passwordHash,
       role,
     });
+    logEditHistory({
+      userEmail: (token.email as string) ?? '',
+      userRole: (token.role as string) ?? undefined,
+      action: 'create',
+      entityType: 'user',
+      entityId: user.id,
+      entityLabel: user.email,
+    });
     return NextResponse.json(user);
   } catch (e) {
-    return NextResponse.json({ error: 'Erreur' }, { status: 500 });
+    console.error('POST /api/users error:', e);
+    const message =
+      e instanceof Error
+        ? e.message
+        : typeof (e as { message?: string })?.message === 'string'
+          ? (e as { message: string }).message
+          : '';
+    if (message.includes('read-only') || message.includes('EROFS') || message.includes('EACCES') || message.includes('EPERM')) {
+      return NextResponse.json(
+        {
+          error:
+            'Impossible d’ajouter un utilisateur sur ce déploiement. Configurez Supabase (SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY) dans les variables d’environnement (ex. Vercel).',
+        },
+        { status: 503 }
+      );
+    }
+    // Surface Supabase/DB errors (e.g. "relation \"app_users\" does not exist") so user can fix setup
+    const safeMessage = message && message.length < 200 ? message : '';
+    return NextResponse.json(
+      { error: safeMessage || 'Erreur lors de la création.' },
+      { status: 500 }
+    );
   }
 }
