@@ -99,6 +99,7 @@ export async function PUT(
       deathPlace: body.deathPlace !== undefined ? (body.deathPlace?.trim() || undefined) : undefined,
       deathLat: body.deathLat !== undefined ? (body.deathLat != null ? Number(body.deathLat) : undefined) : undefined,
       deathLng: body.deathLng !== undefined ? (body.deathLng != null ? Number(body.deathLng) : undefined) : undefined,
+      chahid: body.chahid !== undefined ? body.chahid !== false : undefined,
       lastEditedAt: now,
       lastEditedBy: editorEmail,
     });

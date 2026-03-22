@@ -25,6 +25,8 @@ export interface Biography {
   deathLat?: number;
   /** GPS longitude where the person died (for map). */
   deathLng?: number;
+  /** Martyr (Chahid). Omitted / undefined is treated as true (default). */
+  chahid?: boolean;
   createdAt: string;
   updatedAt: string;
   lastEditedAt?: string;

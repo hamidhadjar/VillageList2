@@ -7,6 +7,7 @@ import { jsPDF } from 'jspdf';
 import sharp from 'sharp';
 
 type SortOption = 'name-asc' | 'name-desc' | 'death-asc' | 'death-desc' | 'updated-desc' | 'updated-asc';
+type ChahidFilter = 'all' | 'chahid' | 'non-chahid';
 
 function parseDeathDate(dateStr: string | undefined): string {
   if (!dateStr || !dateStr.trim()) return '';
@@ -20,18 +21,25 @@ function parseDeathDate(dateStr: string | undefined): string {
   return s;
 }
 
+function matchesChahidFilter(bio: Biography, f: ChahidFilter): boolean {
+  if (f === 'all') return true;
+  if (f === 'chahid') return bio.chahid !== false;
+  return bio.chahid === false;
+}
+
 function filterAndSortBiographies(
   bios: Biography[],
   sort: SortOption,
   nameFilter: string,
   birthFilter: string,
-  deathFilter: string
+  deathFilter: string,
+  chahidFilter: ChahidFilter = 'all'
 ): Biography[] {
   const filtered = bios.filter((bio) => {
     const nameMatch = !nameFilter.trim() || bio.name.toLowerCase().includes(nameFilter.trim().toLowerCase());
     const birthMatch = !birthFilter.trim() || (bio.birthDate ?? '').toLowerCase().includes(birthFilter.trim().toLowerCase());
     const deathMatch = !deathFilter.trim() || (bio.deathDate ?? '').toLowerCase().includes(deathFilter.trim().toLowerCase());
-    return nameMatch && birthMatch && deathMatch;
+    return nameMatch && birthMatch && deathMatch && matchesChahidFilter(bio, chahidFilter);
   });
   const list = [...filtered];
   const updatedAt = (bio: Biography) => bio.lastEditedAt || bio.updatedAt || '';
@@ -125,6 +133,7 @@ function addOneBioToPdf(
   if (bio.title) addLabel('Titre :', bio.title);
   if (bio.birthDate) addLabel('Date de naissance :', bio.birthDate);
   if (bio.deathDate) addLabel('Date de décès :', bio.deathDate);
+  if (bio.chahid !== false) addLabel('Chahid :', 'Oui');
   y += 2;
 
   if (images.length > 0) {
@@ -190,6 +199,7 @@ function paragraphsForOneBio(bio: Biography, images: ImageData[]): Paragraph[] {
   if (bio.title) children.push(label('Titre :', bio.title));
   if (bio.birthDate) children.push(label('Date de naissance :', bio.birthDate));
   if (bio.deathDate) children.push(label('Date de décès :', bio.deathDate));
+  if (bio.chahid !== false) children.push(label('Chahid :', 'Oui'));
 
   if (images.length > 0) {
     children.push(
@@ -262,6 +272,7 @@ async function buildDocxAll(bios: Biography[], imagesPerBio: ImageData[][]): Pro
 }
 
 const VALID_SORT: SortOption[] = ['name-asc', 'name-desc', 'death-asc', 'death-desc', 'updated-desc', 'updated-asc'];
+const VALID_CHAHID: ChahidFilter[] = ['all', 'chahid', 'non-chahid'];
 
 export async function GET(request: NextRequest) {
   const format = request.nextUrl.searchParams.get('format')?.toLowerCase();
@@ -269,6 +280,9 @@ export async function GET(request: NextRequest) {
   const name = request.nextUrl.searchParams.get('name') ?? '';
   const birthDate = request.nextUrl.searchParams.get('birthDate') ?? '';
   const deathDate = request.nextUrl.searchParams.get('deathDate') ?? '';
+  const chahidRaw = request.nextUrl.searchParams.get('chahid');
+  const chahidFilter: ChahidFilter =
+    chahidRaw && VALID_CHAHID.includes(chahidRaw as ChahidFilter) ? (chahidRaw as ChahidFilter) : 'all';
 
   if (!format || (format !== 'pdf' && format !== 'docx')) {
     return NextResponse.json(
@@ -281,7 +295,7 @@ export async function GET(request: NextRequest) {
   }
 
   const allBios = await getAllBiographies();
-  const bios = filterAndSortBiographies(allBios, sort, name, birthDate, deathDate);
+  const bios = filterAndSortBiographies(allBios, sort, name, birthDate, deathDate, chahidFilter);
 
   if (bios.length === 0) {
     return NextResponse.json(

@@ -140,6 +140,11 @@ export default function ViewBioPage() {
           );
         })()}
         <h2 className="bio-view-name">{bio.name}</h2>
+        {bio.chahid !== false && (
+          <p className="meta" style={{ marginTop: '0.25rem', fontWeight: 600 }}>
+            Chahid
+          </p>
+        )}
         {bio.title && <p className="bio-view-title">{bio.title}</p>}
         {(bio.birthDate || bio.deathDate) && (
           <p className="meta bio-view-dates">

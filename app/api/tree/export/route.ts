@@ -8,6 +8,14 @@ import sharp from 'sharp';
 
 const toId = (x: string | number | undefined | null): string => (x == null ? '' : String(x).trim());
 
+type ChahidFilter = 'all' | 'chahid' | 'non-chahid';
+
+function matchesChahidFilter(bio: Biography, f: ChahidFilter): boolean {
+  if (f === 'all') return true;
+  if (f === 'chahid') return bio.chahid !== false;
+  return bio.chahid === false;
+}
+
 type ImageData = { buffer: Buffer; width: number; height: number; format: 'jpeg' | 'png' };
 
 async function fetchImageData(url: string, origin: string): Promise<ImageData | null> {
@@ -378,6 +386,8 @@ async function buildDocx(
   return Packer.toBuffer(doc);
 }
 
+const VALID_CHAHID: ChahidFilter[] = ['all', 'chahid', 'non-chahid'];
+
 export async function GET(request: NextRequest) {
   const format = request.nextUrl.searchParams.get('format')?.toLowerCase();
   if (!format || (format !== 'pdf' && format !== 'docx')) {
@@ -387,7 +397,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const biographies = await getAllBiographies();
+  const chahidRaw = request.nextUrl.searchParams.get('chahid');
+  const chahidFilter: ChahidFilter =
+    chahidRaw && VALID_CHAHID.includes(chahidRaw as ChahidFilter) ? (chahidRaw as ChahidFilter) : 'all';
+
+  const allBios = await getAllBiographies();
+  const biographies =
+    chahidFilter === 'all' ? allBios : allBios.filter((b) => matchesChahidFilter(b, chahidFilter));
   const { roots, childrenMap, map } = buildTreeData(biographies);
 
   if (roots.length === 0) {

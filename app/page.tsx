@@ -7,9 +7,17 @@ import { useShowLastEdited } from '@/app/context/ShowLastEditedContext';
 import { Biography, getImageUrls } from '@/lib/types';
 import type { Role } from '@/lib/user-types';
 import { formatDateDisplay } from '@/lib/date-input';
+import { ChahidFilterSegmented } from '@/app/components/ChahidFilterSegmented';
 
 type SortOption = 'name-asc' | 'name-desc' | 'death-asc' | 'death-desc' | 'updated-desc' | 'updated-asc';
 type ViewMode = 'list' | 'gallery';
+type ChahidFilter = 'all' | 'chahid' | 'non-chahid';
+
+function matchesChahidFilter(bio: Biography, f: ChahidFilter): boolean {
+  if (f === 'all') return true;
+  if (f === 'chahid') return bio.chahid !== false;
+  return bio.chahid === false;
+}
 
 function parseDeathDate(dateStr: string | undefined): string {
   if (!dateStr || !dateStr.trim()) return '';
@@ -57,12 +65,13 @@ export default function HomePage() {
   const [searchDeathDate, setSearchDeathDate] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('name-asc');
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
+  const [chahidFilter, setChahidFilter] = useState<ChahidFilter>('all');
 
   const filtered = biographies.filter((bio) => {
     const nameMatch = !searchName.trim() || bio.name.toLowerCase().includes(searchName.trim().toLowerCase());
     const birthMatch = !searchBirthDate.trim() || (bio.birthDate ?? '').toLowerCase().includes(searchBirthDate.trim().toLowerCase());
     const deathMatch = !searchDeathDate.trim() || (bio.deathDate ?? '').toLowerCase().includes(searchDeathDate.trim().toLowerCase());
-    return nameMatch && birthMatch && deathMatch;
+    return nameMatch && birthMatch && deathMatch && matchesChahidFilter(bio, chahidFilter);
   });
 
   const sorted = useMemo(() => {
@@ -127,7 +136,7 @@ export default function HomePage() {
     );
   }
 
-  const hasFilters = !!(searchName.trim() || searchBirthDate.trim() || searchDeathDate.trim());
+  const hasFilters = !!(searchName.trim() || searchBirthDate.trim() || searchDeathDate.trim() || chahidFilter !== 'all');
 
   const exportUrl = (format: 'pdf' | 'docx') => {
     const params = new URLSearchParams({
@@ -137,6 +146,7 @@ export default function HomePage() {
       birthDate: searchBirthDate.trim(),
       deathDate: searchDeathDate.trim(),
     });
+    if (chahidFilter !== 'all') params.set('chahid', chahidFilter);
     return `/api/biographies/export?${params.toString()}`;
   };
 
@@ -218,6 +228,14 @@ export default function HomePage() {
                 placeholder="ex. 1995"
                 value={searchDeathDate}
                 onChange={(e) => setSearchDeathDate(e.target.value)}
+              />
+            </div>
+            <div className="form-group search-field search-field-chahid">
+              <ChahidFilterSegmented
+                id="search-chahid"
+                value={chahidFilter}
+                onChange={setChahidFilter}
+                stretch
               />
             </div>
           </div>

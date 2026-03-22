@@ -1,19 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Biography } from '@/lib/types';
 import { getImageUrls } from '@/lib/types';
 import { formatDateDisplay } from '@/lib/date-input';
+import { ChahidFilterSegmented } from '@/app/components/ChahidFilterSegmented';
+
+type ChahidFilter = 'all' | 'chahid' | 'non-chahid';
+
+function matchesChahidFilter(bio: Biography, f: ChahidFilter): boolean {
+  if (f === 'all') return true;
+  if (f === 'chahid') return bio.chahid !== false;
+  return bio.chahid === false;
+}
 
 const AVATAR_SIZE = 88;
 
 function PersonCard({ bio }: { bio: Biography }) {
   const imageUrls = getImageUrls(bio);
   const firstImage = imageUrls[0];
+  const isChahid = bio.chahid !== false;
   return (
     <Link href={`/bio/${bio.id}`} className="tree-gen-person">
-      <div className="tree-gen-avatar-wrap">
+      <div className={isChahid ? 'tree-gen-avatar-wrap tree-gen-avatar-wrap--chahid' : 'tree-gen-avatar-wrap'}>
         {firstImage ? (
           <img
             src={firstImage}
@@ -128,23 +138,8 @@ function TreeRoot({ bio, map, childrenMap }: { bio: Biography; map: Map<string, 
   );
 }
 
-export default function TreePage() {
-  const [biographies, setBiographies] = useState<Biography[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/biographies')
-      .then((res) => res.ok ? res.json() : [])
-      .then((data: Biography[]) => {
-        if (!cancelled) setBiographies(data);
-      })
-      .catch(() => { if (!cancelled) setBiographies([]); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, []);
-
-  // Normalize IDs to string (API/DB may return numbers)
+/** Build map, childrenMap, roots from a biography list (used full DB vs Chahid-filtered subset). */
+function computeGenealogyTree(biographies: Biography[]) {
   const toId = (x: string | number | undefined | null): string => (x == null ? '' : String(x).trim());
   const map = new Map<string, Biography>();
   for (const b of biographies) {
@@ -152,7 +147,6 @@ export default function TreePage() {
     if (id) map.set(id, b);
   }
 
-  // Children = union of parent.sonIds and everyone who has parent as fatherId (prefer both so no son is missed)
   const childrenMap = new Map<string, Biography[]>();
   const safeSonIds = (b: Biography): string[] =>
     Array.isArray(b.sonIds) ? b.sonIds.map((id) => toId(id)).filter(Boolean) : [];
@@ -174,7 +168,6 @@ export default function TreePage() {
     if (merged.length > 0) childrenMap.set(parentId, merged);
   }
 
-  // Has any family link (including "someone has me as father" so fathers with only children appear)
   const hasRelation = (b: Biography) => {
     const id = toId(b.id);
     if (!id) return false;
@@ -183,7 +176,6 @@ export default function TreePage() {
     return biographies.some((o) => toId(o.fatherId) === id);
   };
 
-  // Not a root only if their father exists in the list (then they appear under him). If father is missing, show as root.
   const isSonOfSomeone = (b: Biography) => {
     const fatherId = toId(b.fatherId);
     if (fatherId && map.has(fatherId)) return true;
@@ -201,6 +193,37 @@ export default function TreePage() {
     return myId === allIds[0];
   });
 
+  const withRelations = biographies.filter(hasRelation);
+  return { map, childrenMap, roots, withRelations };
+}
+
+export default function TreePage() {
+  const [biographies, setBiographies] = useState<Biography[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [chahidFilter, setChahidFilter] = useState<ChahidFilter>('all');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/biographies')
+      .then((res) => res.ok ? res.json() : [])
+      .then((data: Biography[]) => {
+        if (!cancelled) setBiographies(data);
+      })
+      .catch(() => { if (!cancelled) setBiographies([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const fullTree = useMemo(() => computeGenealogyTree(biographies), [biographies]);
+  const visibleBios = useMemo(
+    () => biographies.filter((b) => matchesChahidFilter(b, chahidFilter)),
+    [biographies, chahidFilter]
+  );
+  const filteredTree = useMemo(() => computeGenealogyTree(visibleBios), [visibleBios]);
+
+  const { map, childrenMap, roots } = filteredTree;
+  const withRelations = fullTree.withRelations;
+
   if (loading) {
     return (
       <div className="container">
@@ -212,7 +235,6 @@ export default function TreePage() {
     );
   }
 
-  const withRelations = biographies.filter(hasRelation);
   if (withRelations.length === 0) {
     return (
       <div className="container">
@@ -235,13 +257,45 @@ export default function TreePage() {
     );
   }
 
+  const exportTreeUrl = (format: 'pdf' | 'docx') => {
+    const params = new URLSearchParams({ format });
+    if (chahidFilter !== 'all') params.set('chahid', chahidFilter);
+    return `/api/tree/export?${params.toString()}`;
+  };
+
+  if (roots.length === 0 && chahidFilter !== 'all') {
+    return (
+      <div className="container">
+        <div className="page-header page-header-with-actions">
+          <h1>Arbre généalogique</h1>
+          <Link href="/" className="btn btn-ghost">Retour à la liste</Link>
+        </div>
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <ChahidFilterSegmented
+            id="tree-chahid-filter"
+            value={chahidFilter}
+            onChange={setChahidFilter}
+          />
+        </div>
+        <div className="card">
+          <p className="empty-state">
+            Aucun arbre visible avec ce filtre Chahid.
+          </p>
+          <p className="meta" style={{ marginTop: '0.5rem' }}>
+            Essayez « Tous » ou un autre filtre.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
       <div className="page-header page-header-with-actions">
         <h1>Arbre généalogique</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <a
-            href="/api/tree/export?format=pdf"
+            href={exportTreeUrl('pdf')}
             className="btn btn-ghost"
             download
             rel="noopener noreferrer"
@@ -249,7 +303,7 @@ export default function TreePage() {
             Export PDF
           </a>
           <a
-            href="/api/tree/export?format=docx"
+            href={exportTreeUrl('docx')}
             className="btn btn-ghost"
             download
             rel="noopener noreferrer"
@@ -258,6 +312,13 @@ export default function TreePage() {
           </a>
           <Link href="/" className="btn btn-ghost">Retour à la liste</Link>
         </div>
+      </div>
+      <div className="card" style={{ marginBottom: '1rem' }}>
+        <ChahidFilterSegmented
+          id="tree-chahid-filter-main"
+          value={chahidFilter}
+          onChange={setChahidFilter}
+        />
       </div>
       <p className="meta" style={{ marginBottom: '1.5rem' }}>
         Les fils sont reliés au père sous lui ; les frères apparaissent sur la même ligne (même niveau).

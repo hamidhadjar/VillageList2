@@ -4,8 +4,16 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Biography } from '@/lib/types';
 import type { Event } from '@/lib/event-types';
+import { ChahidFilterSegmented } from '@/app/components/ChahidFilterSegmented';
 
 type MapTab = 'bios' | 'events';
+type ChahidFilter = 'all' | 'chahid' | 'non-chahid';
+
+function matchesChahidFilter(bio: Biography, f: ChahidFilter): boolean {
+  if (f === 'all') return true;
+  if (f === 'chahid') return bio.chahid !== false;
+  return bio.chahid === false;
+}
 
 export default function DeathMapClient() {
   const [biographies, setBiographies] = useState<Biography[]>([]);
@@ -23,6 +31,7 @@ export default function DeathMapClient() {
   const [filterQuery, setFilterQuery] = useState('');
   const [onlyWithDeathLocation, setOnlyWithDeathLocation] = useState(false);
   const [onlyWithEventLocation, setOnlyWithEventLocation] = useState(false);
+  const [chahidFilter, setChahidFilter] = useState<ChahidFilter>('all');
   const [selectedBio, setSelectedBio] = useState<Biography | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'selected'>('all');
@@ -46,7 +55,8 @@ export default function DeathMapClient() {
     loadMap();
   }, []);
 
-  const withLocation = biographies.filter(
+  const biosAfterChahid = biographies.filter((b) => matchesChahidFilter(b, chahidFilter));
+  const withLocation = biosAfterChahid.filter(
     (b) => b.deathLat != null && b.deathLng != null && !Number.isNaN(Number(b.deathLat)) && !Number.isNaN(Number(b.deathLng))
   );
   const eventsWithLocation = events.filter(
@@ -54,7 +64,7 @@ export default function DeathMapClient() {
   );
 
   const q = filterQuery.trim().toLowerCase();
-  const bioListSource = onlyWithDeathLocation ? withLocation : biographies;
+  const bioListSource = onlyWithDeathLocation ? withLocation : biosAfterChahid;
   const filteredBioList = q
     ? bioListSource.filter((b) => b.name.toLowerCase().includes(q))
     : bioListSource;
@@ -161,15 +171,35 @@ export default function DeathMapClient() {
               autoComplete="off"
             />
             {tab === 'bios' && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <input type="checkbox" checked={onlyWithDeathLocation} onChange={(e) => setOnlyWithDeathLocation(e.target.checked)} />
-                <span className="meta">Uniquement avec lieu de décès (sur la carte)</span>
-              </label>
+              <>
+                <div style={{ marginBottom: '0.65rem' }}>
+                  <ChahidFilterSegmented
+                    id="map-chahid-filter"
+                    value={chahidFilter}
+                    onChange={setChahidFilter}
+                    stretch
+                  />
+                </div>
+                <label className="filter-checkbox-row" htmlFor="map-only-death-loc">
+                  <input
+                    id="map-only-death-loc"
+                    type="checkbox"
+                    checked={onlyWithDeathLocation}
+                    onChange={(e) => setOnlyWithDeathLocation(e.target.checked)}
+                  />
+                  <span className="filter-checkbox-text">Uniquement avec lieu de décès (sur la carte)</span>
+                </label>
+              </>
             )}
             {tab === 'events' && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                <input type="checkbox" checked={onlyWithEventLocation} onChange={(e) => setOnlyWithEventLocation(e.target.checked)} />
-                <span className="meta">Uniquement avec lieu (sur la carte)</span>
+              <label className="filter-checkbox-row" htmlFor="map-only-event-loc">
+                <input
+                  id="map-only-event-loc"
+                  type="checkbox"
+                  checked={onlyWithEventLocation}
+                  onChange={(e) => setOnlyWithEventLocation(e.target.checked)}
+                />
+                <span className="filter-checkbox-text">Uniquement avec lieu (sur la carte)</span>
               </label>
             )}
             <p className="meta" style={{ marginBottom: '0.35rem' }}>

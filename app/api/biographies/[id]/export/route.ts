@@ -85,6 +85,7 @@ function buildPdf(bio: Biography, images: ImageData[]): Buffer {
   if (bio.title) addLabel('Titre :', bio.title);
   if (bio.birthDate) addLabel('Date de naissance :', bio.birthDate);
   if (bio.deathDate) addLabel('Date de décès :', bio.deathDate);
+  if (bio.chahid !== false) addLabel('Chahid :', 'Oui');
   y += 2;
 
   // Photos
@@ -149,6 +150,7 @@ async function buildDocx(bio: Biography, images: ImageData[]): Promise<Buffer> {
   if (bio.title) children.push(label('Titre :', bio.title));
   if (bio.birthDate) children.push(label('Date de naissance :', bio.birthDate));
   if (bio.deathDate) children.push(label('Date de décès :', bio.deathDate));
+  if (bio.chahid !== false) children.push(label('Chahid :', 'Oui'));
 
   if (images.length > 0) {
     children.push(

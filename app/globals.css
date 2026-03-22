@@ -510,6 +510,234 @@ input, textarea {
   accent-color: var(--accent);
 }
 
+/* Chahid filter — segmented control (Biographies, Arbre, Carte) */
+.chahid-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.chahid-filter-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+}
+
+.chahid-segment-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  padding: 3px;
+  background: linear-gradient(180deg, #f5f2ec 0%, #ebe6dd 100%);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.chahid-segment-group--stretch {
+  width: 100%;
+}
+
+.chahid-segment {
+  flex: 0 1 auto;
+  border: none;
+  background: transparent;
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 480px) {
+  .chahid-segment {
+    font-size: 0.875rem;
+    padding: 0.45rem 0.95rem;
+  }
+}
+
+.chahid-segment:hover {
+  color: var(--ink);
+  background: rgba(139, 105, 20, 0.1);
+}
+
+.chahid-segment[aria-pressed='true'] {
+  background: #fff;
+  color: #5c450c;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.chahid-segment:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+.chahid-segment-group--stretch .chahid-segment {
+  /* Avoid clipping: minimum readable width, wrap on very narrow viewports */
+  flex: 1 1 5.75rem;
+  min-width: min(100%, 5.75rem);
+  justify-content: center;
+}
+
+@media (max-width: 380px) {
+  .chahid-segment-group--stretch .chahid-segment {
+    flex: 1 1 100%;
+    min-width: 100%;
+    white-space: normal;
+  }
+}
+
+/* Chahid toggle — Ajouter / Modifier biographie (high contrast, readable) */
+.chahid-toggle-card {
+  padding: 1rem 1.15rem;
+  border: 1px solid #d8d2c8;
+  border-radius: var(--radius);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.chahid-toggle-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.chahid-toggle-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.chahid-toggle-title {
+  display: block;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  letter-spacing: 0.01em;
+  color: #111111;
+  line-height: 1.35;
+  margin-bottom: 0.4rem;
+}
+
+.chahid-toggle-desc {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: #2c2c2c;
+  line-height: 1.55;
+  max-width: 42rem;
+}
+
+.chahid-toggle-switch {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin: 0;
+  padding-top: 0.1rem;
+}
+
+.chahid-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.chahid-toggle-track {
+  display: block;
+  width: 3rem;
+  height: 1.65rem;
+  border-radius: 999px;
+  background: #b8b3a8;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+  transition: background 0.22s ease, border-color 0.22s ease;
+}
+
+.chahid-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(1.65rem - 6px);
+  height: calc(1.65rem - 6px);
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.22s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.chahid-toggle-input:checked + .chahid-toggle-track {
+  background: var(--accent);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.chahid-toggle-input:checked + .chahid-toggle-track::after {
+  transform: translateX(1.35rem);
+}
+
+.chahid-toggle-input:focus-visible + .chahid-toggle-track {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .chahid-toggle-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chahid-toggle-switch {
+    align-self: flex-start;
+    padding-top: 0;
+  }
+}
+
+/* Carte / filtres — checkboxes secondaires */
+.filter-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.filter-checkbox-row:hover {
+  background: rgba(139, 105, 20, 0.04);
+  border-color: rgba(139, 105, 20, 0.25);
+}
+
+.filter-checkbox-row input[type='checkbox'] {
+  width: 1.1rem;
+  height: 1.1rem;
+  min-width: 1.1rem;
+  margin-top: 0.1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.filter-checkbox-row .filter-checkbox-text {
+  font-size: 0.8125rem;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
 .login-header {
   text-align: center;
 }
@@ -559,14 +787,25 @@ input, textarea {
 
 .search-bar-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .search-bar-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
   .search-bar-fields {
     grid-template-columns: 1fr;
   }
+}
+
+/* Chahid filter: full row so labels are not squeezed in the 4-column grid */
+.search-bar-fields .search-field-chahid {
+  grid-column: 1 / -1;
 }
 
 .search-bar .search-field {
@@ -841,6 +1080,12 @@ input, textarea {
   background: linear-gradient(145deg, #f0f2eb 0%, #e2e6dc 100%);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
+}
+
+.tree-gen-avatar-wrap--chahid {
+  border-color: #c43c3c;
+  background: linear-gradient(145deg, #f5ecec 0%, #ebe2e2 100%);
+  box-shadow: 0 2px 12px rgba(180, 50, 50, 0.12);
 }
 
 .tree-gen-avatar {

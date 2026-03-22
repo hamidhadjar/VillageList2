@@ -63,7 +63,8 @@ function buildContextSummary(bios: Biography[], events: Event[]): string {
     if (spouse) relations.push(`conjoint: ${spouse}`);
     if (sons.length) relations.push(`fils: ${sons.join(', ')}`);
     const relStr = relations.length ? ` | ${relations.join(' ; ')}` : '';
-    const line = `- ${name} | né à ${birth} | décédé à ${death}${relStr}\n`;
+    const chahidStr = b.chahid !== false ? ' | Chahid' : '';
+    const line = `- ${name} | né à ${birth} | décédé à ${death}${chahidStr}${relStr}\n`;
     if (len + line.length > maxBiosChars) break;
     bioLines.push(line.trim());
     len += line.length;

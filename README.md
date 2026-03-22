@@ -10,6 +10,7 @@ A Next.js app to manage people biographies: add, edit, and remove entries. Uses 
    - `docs/supabase-schema.sql` to create the `biographies` table
    - `docs/supabase-migration-events.sql` to create the `events` table (for the Événements page)
    - `docs/supabase-migration-edit-history.sql` to create the `edit_history` table (for the admin Historique tab)
+   - `docs/supabase-migration-chahid.sql` to add the **Chahid** flag on biographies (if the table already exists)
    - `docs/supabase-app-users.sql` if you use Supabase for login (app users)
 
 3. **Storage**: In Supabase → **Storage** → **New bucket**:

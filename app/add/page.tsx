@@ -8,6 +8,7 @@ import type { Biography } from '@/lib/types';
 import { parseDateForInput } from '@/lib/date-input';
 import { SearchablePersonMultiSelect } from '@/app/components/SearchablePersonMultiSelect';
 import { MapPickerModal } from '@/app/components/MapPickerModal';
+import { ChahidToggleField } from '@/app/components/ChahidToggleField';
 
 export default function AddPage() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function AddPage() {
   const [spouseId, setSpouseId] = useState('');
   const [sonIds, setSonIds] = useState<string[]>([]);
   const [brotherIds, setBrotherIds] = useState<string[]>([]);
+  const [chahid, setChahid] = useState(true);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
@@ -115,6 +117,7 @@ export default function AddPage() {
           deathPlace: deathPlace.trim() || undefined,
           deathLat: deathLat.trim() ? parseFloat(deathLat) : undefined,
           deathLng: deathLng.trim() ? parseFloat(deathLng) : undefined,
+          chahid,
         }),
       });
       const data = await res.json();
@@ -257,6 +260,9 @@ export default function AddPage() {
             setDeathLng(String(lng));
           }}
         />
+        <div className="form-group">
+          <ChahidToggleField id="add-chahid" checked={chahid} onChange={setChahid} />
+        </div>
         <div className="form-group">
           <label htmlFor="summary">Résumé *</label>
           <textarea

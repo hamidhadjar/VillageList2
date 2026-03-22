@@ -75,6 +75,7 @@ function toRow(bio) {
     updated_at: bio.updatedAt ?? new Date().toISOString(),
     last_edited_at: bio.lastEditedAt ?? null,
     last_edited_by: bio.lastEditedBy ?? null,
+    chahid: bio.chahid === false ? false : true,
   };
 }
 

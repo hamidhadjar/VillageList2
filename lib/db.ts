@@ -33,6 +33,7 @@ function rowToBio(row: Record<string, unknown>): Biography {
     deathPlace: (row.death_place as string) ?? undefined,
     deathLat: row.death_lat != null ? Number(row.death_lat) : undefined,
     deathLng: row.death_lng != null ? Number(row.death_lng) : undefined,
+    chahid: row.chahid !== false,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     lastEditedAt: (row.last_edited_at as string) ?? undefined,
@@ -90,6 +91,7 @@ export async function createBiography(
       death_place: input.deathPlace?.trim() || null,
       death_lat: input.deathLat != null ? input.deathLat : null,
       death_lng: input.deathLng != null ? input.deathLng : null,
+      chahid: input.chahid === true,
     };
     if (imageUrls.length) row.image_urls = imageUrls;
     const { data, error } = await supabase.from(TABLE).insert(row).select().single();
@@ -127,6 +129,7 @@ export async function updateBiography(
     if (input.deathPlace !== undefined) row.death_place = input.deathPlace?.trim() || null;
     if (input.deathLat !== undefined) row.death_lat = input.deathLat != null ? input.deathLat : null;
     if (input.deathLng !== undefined) row.death_lng = input.deathLng != null ? input.deathLng : null;
+    if (input.chahid !== undefined) row.chahid = input.chahid !== false;
     const now = new Date().toISOString();
     row.updated_at = now;
     if (input.lastEditedAt !== undefined) row.last_edited_at = input.lastEditedAt;

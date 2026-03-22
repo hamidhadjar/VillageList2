@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Biography, getImageUrls, normalizeImageUrl } from '@/lib/types';
 import { SearchablePersonMultiSelect } from '@/app/components/SearchablePersonMultiSelect';
 import { MapPickerModal } from '@/app/components/MapPickerModal';
+import { ChahidToggleField } from '@/app/components/ChahidToggleField';
 import { parseDateForInput } from '@/lib/date-input';
 
 export default function EditPage() {
@@ -34,6 +35,7 @@ export default function EditPage() {
   const [spouseId, setSpouseId] = useState('');
   const [sonIds, setSonIds] = useState<string[]>([]);
   const [brotherIds, setBrotherIds] = useState<string[]>([]);
+  const [chahid, setChahid] = useState(true);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
@@ -70,6 +72,7 @@ export default function EditPage() {
         setSpouseId(data.spouseId ?? '');
         setSonIds(Array.isArray(data.sonIds) ? data.sonIds : []);
         setBrotherIds(Array.isArray(data.brotherIds) ? data.brotherIds : []);
+        setChahid(data.chahid !== false);
       }
       if (listRes.ok && !cancelled) {
         const list = await listRes.json();
@@ -146,13 +149,16 @@ export default function EditPage() {
           summary: form.summary.trim(),
           fullBio: form.fullBio.trim(),
           imageUrls: finalImageUrls,
-          fatherId: fatherId.trim() || undefined,
-          spouseId: spouseId.trim() || undefined,
+          /* Always send fatherId/spouseId (use "" when empty). JSON.stringify drops `undefined`,
+           * so the API must receive the keys to clear links on save. */
+          fatherId: fatherId.trim(),
+          spouseId: spouseId.trim(),
           sonIds,
           brotherIds,
           deathPlace: deathPlace.trim() || undefined,
           deathLat: deathLat.trim() ? parseFloat(deathLat) : undefined,
           deathLng: deathLng.trim() ? parseFloat(deathLng) : undefined,
+          chahid,
         }),
       });
       const data = await res.json();
@@ -337,6 +343,9 @@ export default function EditPage() {
             setDeathLng(String(lng));
           }}
         />
+        <div className="form-group">
+          <ChahidToggleField id="edit-chahid" checked={chahid} onChange={setChahid} />
+        </div>
         <div className="form-group">
           <label htmlFor="summary">Résumé *</label>
           <textarea

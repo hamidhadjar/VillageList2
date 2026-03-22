@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = (await request.json()) as BiographyInput;
-    const { name, summary, fullBio, birthDate, birthPlace, deathDate, title, imageUrl, imageUrls, fatherId, sonIds, brotherIds, spouseId, deathPlace, deathLat, deathLng } = body;
+    const { name, summary, fullBio, birthDate, birthPlace, deathDate, title, imageUrl, imageUrls, fatherId, sonIds, brotherIds, spouseId, deathPlace, deathLat, deathLng, chahid } = body;
     if (!name?.trim() || !summary?.trim() || !fullBio?.trim()) {
       return NextResponse.json(
         { error: 'Le nom, le résumé et la biographie complète sont obligatoires.' },
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       deathPlace: deathPlace?.trim() || undefined,
       deathLat: deathLat != null ? Number(deathLat) : undefined,
       deathLng: deathLng != null ? Number(deathLng) : undefined,
+      chahid: chahid !== false,
     });
     // Auto link spouse ↔ spouse
     const sid = spouseId?.trim();
